@@ -1,59 +1,56 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Monitor GitHub</title>
+    <title>Vellez Monitor Touch</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #status-panel { background: #1a1a1a; padding: 10px; border-bottom: 2px solid #333; flex-grow: 1; display: flex; flex-direction: column; }
+        #calls-display { font-size: 32px; color: #ff4444; font-weight: bold; margin: 10px 0; flex-grow: 1; overflow-y: auto; }
         
-        /* Список займає максимум місця */
-        #status-panel { background: #1a1a1a; padding: 15px; border-bottom: 2px solid #333; flex-grow: 1; display: flex; flex-direction: column; }
-        #calls-display { font-size: 40px; color: #ff4444; font-weight: bold; margin-top: 10px; line-height: 1.2; overflow-y: auto; flex-grow: 1; word-wrap: break-word; }
+        .main-btn { width: 100%; padding: 20px; font-size: 24px; font-weight: bold; color: white; border: none; border-radius: 8px; margin-bottom: 10px; cursor: pointer; }
+        .btn-reset { background: #d32f2f; }
+        .btn-pause { background: #555; }
+        .btn-pause.active { background: #fbc02d; color: black; }
+
+        #video-container { position: relative; height: 35vh; background: #000; flex-shrink: 0; touch-action: none; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        #video-container { position: relative; height: 25vh; background: #000; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-top: 1px solid #444; }
-        video { height: 100%; width: auto; max-width: 100%; transform: scaleX(1); }
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        
-        #test-panel { background: #111; padding: 5px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; flex-shrink: 0; }
-        .test-btn { padding: 12px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; font-size: 14px; font-weight: bold; }
-        .test-btn:active { background: #c62828; }
-        
-        .controls { padding: 10px; display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; flex-shrink: 0; }
-        button.reset { background: #d32f2f; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 18px; }
-        
-        canvas { display: none; }
+        #test-panel { background: #111; padding: 5px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+        .test-btn { padding: 10px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; font-size: 14px; }
+        .hint { font-size: 12px; color: #888; text-align: center; padding: 5px; }
     </style>
 </head>
 <body>
 
     <div id="status-panel">
-        <div><strong>🔔 Активні виклики (10 палат):</strong></div>
+        <div><strong>🔔 АКТИВНІ ВИКЛИКИ:</strong></div>
         <div id="calls-display">Список порожній</div>
+        <button class="main-btn btn-reset" onclick="clearCalls()">ОЧИСТИТИ СПИСОК</button>
+        <button id="pause-btn" class="main-btn btn-pause" onclick="togglePause()">ПАУЗА РОЗПІЗНАВАННЯ</button>
     </div>
 
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
-        <canvas id="canvas"></canvas>
+        <canvas id="canvas" style="display:none;"></canvas>
         <svg id="overlay"></svg>
     </div>
 
-    <div id="test-panel">
-        <button class="test-btn" onclick="simulate(1)">П1</button>
-        <button class="test-btn" onclick="simulate(2)">П2</button>
-        <button class="test-btn" onclick="simulate(3)">П3</button>
-        <button class="test-btn" onclick="simulate(4)">П4</button>
-        <button class="test-btn" onclick="simulate(5)">П5</button>
-        <button class="test-btn" onclick="simulate(6)">П6</button>
-        <button class="test-btn" onclick="simulate(7)">П7</button>
-        <button class="test-btn" onclick="simulate(8)">П8</button>
-        <button class="test-btn" onclick="simulate(9)">П9</button>
-        <button class="test-btn" onclick="simulate(10)">П10</button>
-    </div>
+    <div class="hint">Рухайте зелені точки пальцем, щоб навести на лампочки</div>
 
-    <div class="controls">
-        <div style="font-size: 12px; color: #666;">Наведіть точки на діоди</div>
-        <button class="reset" onclick="clearCalls()">ОЧИСТИТИ</button>
+    <div id="test-panel">
+        <button class="test-btn" onclick="registerCall(1)">П1</button>
+        <button class="test-btn" onclick="registerCall(2)">П2</button>
+        <button class="test-btn" onclick="registerCall(3)">П3</button>
+        <button class="test-btn" onclick="registerCall(4)">П4</button>
+        <button class="test-btn" onclick="registerCall(5)">П5</button>
+        <button class="test-btn" onclick="registerCall(6)">П6</button>
+        <button class="test-btn" onclick="registerCall(7)">П7</button>
+        <button class="test-btn" onclick="registerCall(8)">П8</button>
+        <button class="test-btn" onclick="registerCall(9)">П9</button>
+        <button class="test-btn" onclick="registerCall(10)">П10</button>
     </div>
 
     <script>
@@ -62,32 +59,63 @@
         const overlay = document.getElementById('overlay');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const display = document.getElementById('calls-display');
+        const pauseBtn = document.getElementById('pause-btn');
         
         let callRegistry = {};
-        const zones = Array.from({length: 10}, (_, i) => ({
-            id: i + 1, x: 10 + (i * 8.8), y: 70, lastActive: false
+        let isPaused = false;
+        let selectedPoint = null;
+
+        // Початкові координати зон
+        let zones = Array.from({length: 10}, (_, i) => ({
+            id: i + 1, x: 10 + (i * 8.8), y: 50, lastActive: false
         }));
 
+        // Малюємо точки, які можна рухати
         function drawMarkers() {
             overlay.innerHTML = '';
-            zones.forEach(zone => {
+            zones.forEach((zone, index) => {
                 const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 circle.setAttribute("cx", zone.x + "%");
                 circle.setAttribute("cy", zone.y + "%");
-                circle.setAttribute("r", "5");
-                circle.setAttribute("fill", "#00ff00");
+                circle.setAttribute("r", "15"); // Більша область для натискання
+                circle.setAttribute("fill", "rgba(0, 255, 0, 0.5)");
                 circle.setAttribute("stroke", "white");
+                circle.dataset.index = index;
+                
+                // Обробка руху пальцем
+                circle.addEventListener('touchstart', (e) => { selectedPoint = index; });
                 overlay.appendChild(circle);
+
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", zone.x + "%");
+                text.setAttribute("y", (zone.y - 5) + "%");
+                text.setAttribute("fill", "white");
+                text.setAttribute("font-size", "10");
+                text.setAttribute("text-anchor", "middle");
+                text.textContent = zone.id;
+                overlay.appendChild(text);
             });
         }
+
+        overlay.addEventListener('touchmove', (e) => {
+            if (selectedPoint !== null) {
+                const rect = overlay.getBoundingClientRect();
+                const touch = e.touches[0];
+                zones[selectedPoint].x = ((touch.clientX - rect.left) / rect.width) * 100;
+                zones[selectedPoint].y = ((touch.clientY - rect.top) / rect.height) * 100;
+                drawMarkers();
+            }
+        });
+
+        overlay.addEventListener('touchend', () => { selectedPoint = null; });
+
         drawMarkers();
 
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => alert("Потрібен HTTPS або доступ до камери: " + err));
+            .then(stream => { video.srcObject = stream; });
 
         function processFrame() {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            if (!isPaused && video.readyState === video.HAVE_ENOUGH_DATA) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -96,7 +124,7 @@
                     const y = canvas.height * zone.y / 100;
                     const pixel = ctx.getImageData(x, y, 1, 1).data;
                     const brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
-                    const isActive = brightness > 190;
+                    const isActive = brightness > 200;
                     if (isActive && !zone.lastActive) { registerCall(zone.id); }
                     zone.lastActive = isActive;
                 });
@@ -105,11 +133,10 @@
         }
 
         function registerCall(id) {
+            if (isPaused) return;
             callRegistry[id] = (callRegistry[id] || 0) + 1;
             updateUI();
         }
-
-        function simulate(id) { registerCall(id); }
 
         function updateUI() {
             const keys = Object.keys(callRegistry).sort((a, b) => Number(a) - Number(b));
@@ -117,6 +144,13 @@
         }
 
         function clearCalls() { callRegistry = {}; updateUI(); }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseBtn.innerText = isPaused ? "ВІДНОВИТИ РОБОТУ" : "ПАУЗА РОЗПІЗНАВАННЯ";
+            pauseBtn.classList.toggle('active', isPaused);
+        }
+
         video.addEventListener('play', () => requestAnimationFrame(processFrame));
     </script>
 </body>

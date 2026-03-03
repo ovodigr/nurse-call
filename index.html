@@ -3,53 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez v3.1</title>
+    <title>Vellez v3.3</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        
         #status-panel { background: #1a1a1a; padding: 10px; border-bottom: 2px solid #333; flex: 1; display: flex; flex-direction: column; min-height: 0; }
-        #calls-display { font-size: 30px; color: #ff4444; font-weight: bold; flex-grow: 1; overflow-y: auto; margin: 5px 0; }
+        #calls-display { font-size: 32px; color: #ff4444; font-weight: bold; flex-grow: 1; overflow-y: auto; margin: 5px 0; border: 1px dashed #333; padding: 5px; }
         
-        .main-btn { width: 100%; padding: 12px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 5px; }
+        .main-btn { width: 100%; padding: 12px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 5px; }
         .btn-reset { background: #d32f2f; }
-        .btn-pause { background: #444; font-size: 14px; }
+        .btn-reload { background: #007bff; font-size: 14px; }
+        .btn-pause { background: #444; font-size: 12px; }
         .btn-pause.active { background: #fbc02d; color: #000; }
-        
-        .ver-info { font-size: 10px; color: #555; text-align: right; }
+        .ver-info { font-size: 12px; color: #00ff00; opacity: 0.8; }
 
-        #video-container { position: relative; height: 35vh; background: #000; flex-shrink: 0; touch-action: none; border-top: 1px solid #333; }
-        video { width: 100%; height: 100%; object-fit: contain; }
+        #video-container { position: relative; height: 35vh; background: #222; flex-shrink: 0; touch-action: none; border-top: 2px solid #333; }
+        video { width: 100%; height: 100%; object-fit: contain; background: #000; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
         
-        #test-slider { background: #222; border-top: 2px solid #00ff00; transition: transform 0.3s ease; flex-shrink: 0; position: relative; z-index: 20; }
-        #test-slider.hidden { transform: translateY(80%); }
-        .slider-handle { padding: 12px; text-align: center; background: #333; font-size: 14px; color: #00ff00; font-weight: bold; }
+        #test-slider { background: #222; border-top: 3px solid #00ff00; transition: transform 0.3s ease; flex-shrink: 0; position: relative; z-index: 100; }
+        #test-slider.hidden { transform: translateY(calc(100% - 40px)); }
+        .slider-handle { padding: 10px; text-align: center; background: #333; font-size: 14px; color: #00ff00; font-weight: bold; border-bottom: 1px solid #444; }
         
-        #test-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 10px; }
-        .test-btn { padding: 15px 5px; background: #444; color: white; border: 1px solid #666; border-radius: 4px; font-size: 16px; }
+        #test-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 12px; background: #111; }
+        .test-btn { padding: 12px 5px; background: #444; color: white; border: 1px solid #666; border-radius: 6px; font-size: 14px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="status-panel">
-        <div style="display:flex; justify-content: space-between;">
-            <strong>🔔 ВИКЛИКИ:</strong>
-            <span class="ver-info">v3.1</span>
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+            <strong>🔔 ПАЛАТИ:</strong>
+            <span class="ver-info">v3.3</span>
         </div>
-        <div id="calls-display">Порожньо</div>
-        <button class="main-btn btn-reset" onclick="clearCalls()">СКИДАННЯ</button>
-        <button id="pause-btn" class="main-btn btn-pause" onclick="togglePause()">ПАУЗА КАМЕРИ</button>
+        <div id="calls-display">ПОРОЖНЬО</div>
+        <button class="main-btn btn-reset" onclick="clearCalls()">ОЧИСТИТИ ВСЕ</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <button class="main-btn btn-reload" onclick="forceReload()">ОНОВИТИ (v=)</button>
+            <button id="pause-btn" class="main-btn btn-pause" onclick="togglePause()">ПАУЗА</button>
+        </div>
     </div>
 
     <div id="video-container">
-        <video id="video" autoplay playsinline></video>
+        <video id="video" autoplay playsinline muted></video>
         <canvas id="canvas" style="display:none;"></canvas>
         <svg id="overlay"></svg>
     </div>
 
-    <div id="test-slider">
+    <div id="test-slider" class="hidden">
         <div class="slider-handle" onclick="document.getElementById('test-slider').classList.toggle('hidden')">
-            ▲ ТЕСТОВІ КНОПКИ П1-П10 ▲
+            ▲ ТЕСТОВА ПАНЕЛЬ ▲
         </div>
         <div id="test-grid">
             <button class="test-btn" onclick="registerCall(1)">П1</button>
@@ -84,12 +86,13 @@
         function drawMarkers() {
             overlay.innerHTML = '';
             zones.forEach((zone, index) => {
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
                 const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 circle.setAttribute("cx", zone.x + "%");
                 circle.setAttribute("cy", zone.y + "%");
-                circle.setAttribute("r", "14"); 
-                circle.setAttribute("fill", "rgba(0, 255, 0, 0.3)");
-                circle.setAttribute("stroke", zone.lastActive ? "red" : "white");
+                circle.setAttribute("r", "18"); 
+                circle.setAttribute("fill", zone.lastActive ? "rgba(255, 0, 0, 0.7)" : "rgba(0, 255, 0, 0.4)");
+                circle.setAttribute("stroke", "white");
                 circle.setAttribute("stroke-width", "3");
                 
                 circle.onpointerdown = (e) => { 
@@ -99,20 +102,43 @@
                 circle.onpointermove = (e) => {
                     if (selectedPoint === index) {
                         const rect = overlay.getBoundingClientRect();
-                        zones[index].x = ((e.clientX - rect.left) / rect.width) * 100;
-                        zones[index].y = ((e.clientY - rect.top) / rect.height) * 100;
+                        zones[index].x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+                        zones[index].y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
                         drawMarkers();
                     }
                 };
                 circle.onpointerup = () => { selectedPoint = null; };
-                overlay.appendChild(circle);
+                
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", zone.x + "%");
+                text.setAttribute("y", (zone.y + 1) + "%");
+                text.setAttribute("fill", "white");
+                text.setAttribute("font-size", "14");
+                text.setAttribute("font-weight", "bold");
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("dominant-baseline", "middle");
+                text.textContent = zone.id;
+                text.style.pointerEvents = "none";
+
+                g.appendChild(circle);
+                g.appendChild(text);
+                overlay.appendChild(g);
             });
         }
 
         drawMarkers();
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; });
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: { ideal: 1280 } } 
+                });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => video.play();
+            } catch (err) {
+                console.error("Camera error:", err);
+            }
+        }
 
         function processFrame() {
             if (!isPaused && video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -120,26 +146,31 @@
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                let redraw = false;
+                let stateChanged = false;
                 zones.forEach(zone => {
-                    const x = canvas.width * zone.x / 100;
-                    const y = canvas.height * zone.y / 100;
+                    const x = Math.floor(canvas.width * zone.x / 100);
+                    const y = Math.floor(canvas.height * zone.y / 100);
                     const pixel = ctx.getImageData(x, y, 1, 1).data;
                     const brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
-                    const isActive = brightness > 180;
+                    const isActive = brightness > 195;
                     
                     if (isActive && !zone.lastActive) { 
                         registerCall(zone.id); 
-                        redraw = true;
+                        stateChanged = true;
                     }
                     if (isActive !== zone.lastActive) {
                         zone.lastActive = isActive;
-                        redraw = true;
+                        stateChanged = true;
                     }
                 });
-                if (redraw) drawMarkers();
+                if (stateChanged) drawMarkers();
             }
             requestAnimationFrame(processFrame);
+        }
+
+        function forceReload() {
+            const baseUrl = window.location.href.split('?')[0];
+            window.location.href = baseUrl + '?v=' + new Date().getTime();
         }
 
         function registerCall(id) {
@@ -149,16 +180,17 @@
 
         function updateUI() {
             const keys = Object.keys(callRegistry).sort((a, b) => Number(a) - Number(b));
-            display.innerText = keys.length === 0 ? "Порожньо" : keys.map(id => `${id}(${callRegistry[id]})`).join(", ");
+            display.innerText = keys.length === 0 ? "ПОРОЖНЬО" : keys.map(id => `${id}(${callRegistry[id]})`).join(", ");
         }
 
         function clearCalls() { callRegistry = {}; updateUI(); }
         function togglePause() {
             isPaused = !isPaused;
-            pauseBtn.innerText = isPaused ? "ВІДНОВИТИ" : "ПАУЗА КАМЕРИ";
+            pauseBtn.innerText = isPaused ? "ПУСК" : "ПАУЗА";
             pauseBtn.classList.toggle('active', isPaused);
         }
 
+        startCamera();
         video.addEventListener('play', () => requestAnimationFrame(processFrame));
     </script>
 </body>

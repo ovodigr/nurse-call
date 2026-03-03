@@ -3,40 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Final v3.4</title>
+    <title>Vellez v3.5</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #status-panel { background: #1a1a1a; padding: 10px; border-bottom: 2px solid #333; flex: 1; display: flex; flex-direction: column; }
-        #calls-display { font-size: 34px; color: #ff4444; font-weight: bold; flex-grow: 1; overflow-y: auto; margin: 5px 0; border: 1px dashed #444; }
         
-        .main-btn { width: 100%; padding: 12px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 5px; }
-        .btn-reset { background: #d32f2f; }
-        .btn-reload { background: #007bff; font-size: 14px; }
-        .ver-info { font-size: 12px; color: #00ff00; }
+        /* Верхня панель - 35% екрану */
+        #status-panel { background: #1a1a1a; padding: 10px; border-bottom: 2px solid #333; height: 35vh; display: flex; flex-direction: column; }
+        #calls-display { font-size: 36px; color: #ff4444; font-weight: bold; flex-grow: 1; overflow-y: auto; margin: 5px 0; border: 1px dashed #444; padding: 5px; }
+        
+        .main-btn { width: 100%; padding: 12px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .btn-reset { background: #d32f2f; margin-bottom: 5px; }
+        .btn-reload { background: #007bff; font-size: 14px; height: 40px; }
+        .ver-info { font-size: 11px; color: #00ff00; opacity: 0.7; }
 
-        #video-container { position: relative; height: 35vh; background: #222; flex-shrink: 0; touch-action: none; border: 2px solid #333; }
+        /* Відео - 35% екрану */
+        #video-container { position: relative; height: 35vh; background: #111; touch-action: none; border-top: 2px solid #333; border-bottom: 2px solid #333; }
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
         
-        /* ЦЯ ПАНЕЛЬ МАЄ БУТИ ВИДИМОЮ ЗНИЗУ */
-        #test-slider { background: #333; border-top: 4px solid #ff0000; transition: transform 0.3s ease; flex-shrink: 0; position: relative; z-index: 100; }
-        #test-slider.hidden { transform: translateY(calc(100% - 50px)); }
-        .slider-handle { padding: 15px; text-align: center; background: #444; color: #ff0000; font-weight: bold; font-size: 16px; border-bottom: 1px solid #222; }
-        
-        #test-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 15px; background: #111; }
-        .test-btn { padding: 15px 5px; background: #444; color: white; border: 1px solid #666; border-radius: 6px; font-size: 16px; font-weight: bold; }
+        /* Кнопки - 30% екрану, ЗАВЖДИ ВИДИМІ */
+        #test-panel { height: 30vh; background: #111; padding: 5px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+        .test-btn { background: #333; color: white; border: 1px solid #555; border-radius: 4px; font-size: 16px; font-weight: bold; }
+        .test-btn:active { background: #555; }
     </style>
 </head>
 <body>
 
     <div id="status-panel">
-        <div style="display:flex; justify-content: space-between;">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
             <strong>🔔 ВИКЛИКИ:</strong>
-            <span class="ver-info">v3.4-ULTRA</span>
+            <span class="ver-info">v3.5 [16:52:40]</span>
         </div>
         <div id="calls-display">ПОРОЖНЬО</div>
         <button class="main-btn btn-reset" onclick="clearCalls()">ОЧИСТИТИ ВСЕ</button>
-        <button class="main-btn btn-reload" onclick="forceReload()">ОНОВИТИ КЕШ (v=)</button>
+        <button class="main-btn btn-reload" onclick="forceReload()">ОНОВИТИ (v=FORCE)</button>
     </div>
 
     <div id="video-container">
@@ -45,22 +45,17 @@
         <svg id="overlay"></svg>
     </div>
 
-    <div id="test-slider" class="hidden">
-        <div class="slider-handle" onclick="document.getElementById('test-slider').classList.toggle('hidden')">
-            🛑 ТИСНИ ТУТ (ТЕСТ ПАНЕЛЬ) 🛑
-        </div>
-        <div id="test-grid">
-            <button class="test-btn" onclick="registerCall(1)">П1</button>
-            <button class="test-btn" onclick="registerCall(2)">П2</button>
-            <button class="test-btn" onclick="registerCall(3)">П3</button>
-            <button class="test-btn" onclick="registerCall(4)">П4</button>
-            <button class="test-btn" onclick="registerCall(5)">П5</button>
-            <button class="test-btn" onclick="registerCall(6)">П6</button>
-            <button class="test-btn" onclick="registerCall(7)">П7</button>
-            <button class="test-btn" onclick="registerCall(8)">П8</button>
-            <button class="test-btn" onclick="registerCall(9)">П9</button>
-            <button class="test-btn" onclick="registerCall(10)">П10</button>
-        </div>
+    <div id="test-panel">
+        <button class="test-btn" onclick="registerCall(1)">П1</button>
+        <button class="test-btn" onclick="registerCall(2)">П2</button>
+        <button class="test-btn" onclick="registerCall(3)">П3</button>
+        <button class="test-btn" onclick="registerCall(4)">П4</button>
+        <button class="test-btn" onclick="registerCall(5)">П5</button>
+        <button class="test-btn" onclick="registerCall(6)">П6</button>
+        <button class="test-btn" onclick="registerCall(7)">П7</button>
+        <button class="test-btn" onclick="registerCall(8)">П8</button>
+        <button class="test-btn" onclick="registerCall(9)">П9</button>
+        <button class="test-btn" onclick="registerCall(10)">П10</button>
     </div>
 
     <script>
@@ -73,7 +68,6 @@
         let callRegistry = {};
         let selectedPoint = null;
 
-        // Завантаження збережених координат
         let savedZones = localStorage.getItem('nurseZones');
         let zones = savedZones ? JSON.parse(savedZones) : Array.from({length: 10}, (_, i) => ({
             id: i + 1, x: 10 + (i * 8.8), y: 50, lastActive: false
@@ -98,7 +92,7 @@
                         zones[index].x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
                         zones[index].y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
                         drawMarkers();
-                        localStorage.setItem('nurseZones', JSON.stringify(zones)); // Збереження
+                        localStorage.setItem('nurseZones', JSON.stringify(zones));
                     }
                 };
                 circle.onpointerup = () => { selectedPoint = null; };
@@ -126,7 +120,7 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 video.srcObject = stream;
-            } catch (err) { alert("Помилка камери!"); }
+            } catch (err) { console.error("Cam error"); }
         }
 
         function processFrame() {

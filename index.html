@@ -3,38 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Monitor V3</title>
+    <title>Vellez v3.1</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Верхня панель зі списком */
         #status-panel { background: #1a1a1a; padding: 10px; border-bottom: 2px solid #333; flex: 1; display: flex; flex-direction: column; min-height: 0; }
-        #calls-display { font-size: 28px; color: #ff4444; font-weight: bold; flex-grow: 1; overflow-y: auto; margin-bottom: 10px; }
+        #calls-display { font-size: 30px; color: #ff4444; font-weight: bold; flex-grow: 1; overflow-y: auto; margin: 5px 0; }
         
         .main-btn { width: 100%; padding: 12px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 5px; }
         .btn-reset { background: #d32f2f; }
         .btn-pause { background: #444; font-size: 14px; }
         .btn-pause.active { background: #fbc02d; color: #000; }
+        
+        .ver-info { font-size: 10px; color: #555; text-align: right; }
 
-        /* Контейнер відео */
-        #video-container { position: relative; height: 30vh; background: #000; flex-shrink: 0; touch-action: none; }
+        #video-container { position: relative; height: 35vh; background: #000; flex-shrink: 0; touch-action: none; border-top: 1px solid #333; }
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
         
-        /* Висувна панель тестів */
-        #test-slider { background: #222; border-top: 1px solid #444; transition: transform 0.3s ease; flex-shrink: 0; }
-        #test-slider.hidden { transform: translateY(85%); }
-        .slider-handle { padding: 8px; text-align: center; background: #333; font-size: 12px; color: #aaa; cursor: pointer; }
+        #test-slider { background: #222; border-top: 2px solid #00ff00; transition: transform 0.3s ease; flex-shrink: 0; position: relative; z-index: 20; }
+        #test-slider.hidden { transform: translateY(80%); }
+        .slider-handle { padding: 12px; text-align: center; background: #333; font-size: 14px; color: #00ff00; font-weight: bold; }
         
         #test-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 10px; }
-        .test-btn { padding: 10px; background: #444; color: white; border: 1px solid #666; border-radius: 4px; font-size: 14px; }
+        .test-btn { padding: 15px 5px; background: #444; color: white; border: 1px solid #666; border-radius: 4px; font-size: 16px; }
     </style>
 </head>
 <body>
 
     <div id="status-panel">
-        <strong>🔔 ВИКЛИКИ:</strong>
-        <div id="calls-display">Список порожній</div>
+        <div style="display:flex; justify-content: space-between;">
+            <strong>🔔 ВИКЛИКИ:</strong>
+            <span class="ver-info">v3.1</span>
+        </div>
+        <div id="calls-display">Порожньо</div>
         <button class="main-btn btn-reset" onclick="clearCalls()">СКИДАННЯ</button>
         <button id="pause-btn" class="main-btn btn-pause" onclick="togglePause()">ПАУЗА КАМЕРИ</button>
     </div>
@@ -47,7 +49,7 @@
 
     <div id="test-slider">
         <div class="slider-handle" onclick="document.getElementById('test-slider').classList.toggle('hidden')">
-            ▲ ТЕСТОВІ КНОПКИ (ПРИХОВАТИ/ПОКАЗАТИ) ▲
+            ▲ ТЕСТОВІ КНОПКИ П1-П10 ▲
         </div>
         <div id="test-grid">
             <button class="test-btn" onclick="registerCall(1)">П1</button>
@@ -85,13 +87,11 @@
                 const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 circle.setAttribute("cx", zone.x + "%");
                 circle.setAttribute("cy", zone.y + "%");
-                circle.setAttribute("r", "12"); 
-                circle.setAttribute("fill", "rgba(0, 255, 0, 0.4)");
-                circle.setAttribute("stroke", "white");
-                circle.setAttribute("stroke-width", "2");
-                circle.style.cursor = "move";
+                circle.setAttribute("r", "14"); 
+                circle.setAttribute("fill", "rgba(0, 255, 0, 0.3)");
+                circle.setAttribute("stroke", zone.lastActive ? "red" : "white");
+                circle.setAttribute("stroke-width", "3");
                 
-                // Швидке захоплення точки
                 circle.onpointerdown = (e) => { 
                     selectedPoint = index; 
                     circle.setPointerCapture(e.pointerId);
@@ -119,15 +119,25 @@
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                let redraw = false;
                 zones.forEach(zone => {
                     const x = canvas.width * zone.x / 100;
                     const y = canvas.height * zone.y / 100;
                     const pixel = ctx.getImageData(x, y, 1, 1).data;
                     const brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
-                    const isActive = brightness > 200;
-                    if (isActive && !zone.lastActive) { registerCall(zone.id); }
-                    zone.lastActive = isActive;
+                    const isActive = brightness > 180;
+                    
+                    if (isActive && !zone.lastActive) { 
+                        registerCall(zone.id); 
+                        redraw = true;
+                    }
+                    if (isActive !== zone.lastActive) {
+                        zone.lastActive = isActive;
+                        redraw = true;
+                    }
                 });
+                if (redraw) drawMarkers();
             }
             requestAnimationFrame(processFrame);
         }

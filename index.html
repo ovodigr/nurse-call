@@ -3,27 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez v3.5</title>
+    <title>Vellez v3.6</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Верхня панель - 35% екрану */
-        #status-panel { background: #1a1a1a; padding: 10px; border-bottom: 2px solid #333; height: 35vh; display: flex; flex-direction: column; }
-        #calls-display { font-size: 36px; color: #ff4444; font-weight: bold; flex-grow: 1; overflow-y: auto; margin: 5px 0; border: 1px dashed #444; padding: 5px; }
+        /* Панель викликів */
+        #status-panel { background: #1a1a1a; padding: 8px; border-bottom: 2px solid #333; height: 32vh; display: flex; flex-direction: column; }
+        #calls-display { font-size: 32px; color: #ff4444; font-weight: bold; flex-grow: 1; overflow-y: auto; margin: 4px 0; border: 1px dashed #444; padding: 4px; line-height: 1.2; }
         
-        .main-btn { width: 100%; padding: 12px; font-size: 18px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        .btn-reset { background: #d32f2f; margin-bottom: 5px; }
-        .btn-reload { background: #007bff; font-size: 14px; height: 40px; }
-        .ver-info { font-size: 11px; color: #00ff00; opacity: 0.7; }
+        .main-btn { width: 100%; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-reset { background: #d32f2f; height: 45px; font-size: 18px; margin-bottom: 4px; }
+        .btn-reload { background: #007bff; font-size: 12px; height: 35px; }
+        .btn-pause { background: #444; font-size: 12px; height: 35px; }
+        .btn-pause.active { background: #fbc02d; color: #000; }
+        .ver-info { font-size: 10px; color: #00ff00; opacity: 0.8; }
 
-        /* Відео - 35% екрану */
-        #video-container { position: relative; height: 35vh; background: #111; touch-action: none; border-top: 2px solid #333; border-bottom: 2px solid #333; }
+        /* Відео */
+        #video-container { position: relative; height: 33vh; background: #111; touch-action: none; border-top: 1px solid #333; }
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
         
-        /* Кнопки - 30% екрану, ЗАВЖДИ ВИДИМІ */
-        #test-panel { height: 30vh; background: #111; padding: 5px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-        .test-btn { background: #333; color: white; border: 1px solid #555; border-radius: 4px; font-size: 16px; font-weight: bold; }
+        /* Компактні кнопки */
+        #test-panel { height: 35vh; background: #111; padding: 4px; display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(2, 1fr); gap: 4px; }
+        .test-btn { background: #333; color: white; border: 1px solid #555; border-radius: 4px; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
         .test-btn:active { background: #555; }
     </style>
 </head>
@@ -31,12 +33,15 @@
 
     <div id="status-panel">
         <div style="display:flex; justify-content: space-between; align-items: center;">
-            <strong>🔔 ВИКЛИКИ:</strong>
-            <span class="ver-info">v3.5 [16:52:40]</span>
+            <strong>🔔 ПАЛАТИ:</strong>
+            <span class="ver-info">v3.6 [16:55:10]</span>
         </div>
         <div id="calls-display">ПОРОЖНЬО</div>
         <button class="main-btn btn-reset" onclick="clearCalls()">ОЧИСТИТИ ВСЕ</button>
-        <button class="main-btn btn-reload" onclick="forceReload()">ОНОВИТИ (v=FORCE)</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+            <button class="main-btn btn-reload" onclick="forceReload()">ОНОВИТИ (v=)</button>
+            <button id="pause-btn" class="main-btn btn-pause" onclick="togglePause()">ПАУЗА АВТО</button>
+        </div>
     </div>
 
     <div id="video-container">
@@ -46,16 +51,16 @@
     </div>
 
     <div id="test-panel">
-        <button class="test-btn" onclick="registerCall(1)">П1</button>
-        <button class="test-btn" onclick="registerCall(2)">П2</button>
-        <button class="test-btn" onclick="registerCall(3)">П3</button>
-        <button class="test-btn" onclick="registerCall(4)">П4</button>
-        <button class="test-btn" onclick="registerCall(5)">П5</button>
-        <button class="test-btn" onclick="registerCall(6)">П6</button>
-        <button class="test-btn" onclick="registerCall(7)">П7</button>
-        <button class="test-btn" onclick="registerCall(8)">П8</button>
-        <button class="test-btn" onclick="registerCall(9)">П9</button>
-        <button class="test-btn" onclick="registerCall(10)">П10</button>
+        <button class="test-btn" onclick="registerCall(1)">1</button>
+        <button class="test-btn" onclick="registerCall(2)">2</button>
+        <button class="test-btn" onclick="registerCall(3)">3</button>
+        <button class="test-btn" onclick="registerCall(4)">4</button>
+        <button class="test-btn" onclick="registerCall(5)">5</button>
+        <button class="test-btn" onclick="registerCall(6)">6</button>
+        <button class="test-btn" onclick="registerCall(7)">7</button>
+        <button class="test-btn" onclick="registerCall(8)">8</button>
+        <button class="test-btn" onclick="registerCall(9)">9</button>
+        <button class="test-btn" onclick="registerCall(10)">10</button>
     </div>
 
     <script>
@@ -64,8 +69,10 @@
         const overlay = document.getElementById('overlay');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const display = document.getElementById('calls-display');
+        const pauseBtn = document.getElementById('pause-btn');
         
         let callRegistry = {};
+        let isPaused = false;
         let selectedPoint = null;
 
         let savedZones = localStorage.getItem('nurseZones');
@@ -124,7 +131,7 @@
         }
 
         function processFrame() {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            if (!isPaused && video.readyState === video.HAVE_ENOUGH_DATA) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -158,6 +165,12 @@
         }
 
         function clearCalls() { callRegistry = {}; updateUI(); }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseBtn.innerText = isPaused ? "ВІДНОВИТИ" : "ПАУЗА АВТО";
+            pauseBtn.classList.toggle('active', isPaused);
+        }
 
         startCamera();
         video.addEventListener('play', () => requestAnimationFrame(processFrame));

@@ -3,30 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez v3.6</title>
+    <title>Vellez v3.7</title>
     <style>
-        body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        /* Використовуємо dvh (dynamic viewport height) для точного розрахунку на мобільних */
+        body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
         
-        /* Панель викликів */
-        #status-panel { background: #1a1a1a; padding: 8px; border-bottom: 2px solid #333; height: 32vh; display: flex; flex-direction: column; }
-        #calls-display { font-size: 32px; color: #ff4444; font-weight: bold; flex-grow: 1; overflow-y: auto; margin: 4px 0; border: 1px dashed #444; padding: 4px; line-height: 1.2; }
+        /* Верхній блок: займає стільки, скільки треба контенту */
+        #status-panel { background: #1a1a1a; padding: 8px; border-bottom: 2px solid #333; flex-shrink: 0; }
+        #calls-display { font-size: 28px; color: #ff4444; font-weight: bold; min-height: 60px; max-height: 120px; overflow-y: auto; margin: 5px 0; border: 1px dashed #444; padding: 5px; }
         
         .main-btn { width: 100%; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
-        .btn-reset { background: #d32f2f; height: 45px; font-size: 18px; margin-bottom: 4px; }
-        .btn-reload { background: #007bff; font-size: 12px; height: 35px; }
-        .btn-pause { background: #444; font-size: 12px; height: 35px; }
+        .btn-reset { background: #d32f2f; height: 50px; font-size: 20px; margin-bottom: 5px; }
+        .btn-util { height: 35px; font-size: 12px; }
+        .btn-reload { background: #007bff; }
+        .btn-pause { background: #444; }
         .btn-pause.active { background: #fbc02d; color: #000; }
         .ver-info { font-size: 10px; color: #00ff00; opacity: 0.8; }
 
-        /* Відео */
-        #video-container { position: relative; height: 33vh; background: #111; touch-action: none; border-top: 1px solid #333; }
+        /* Відео: займає весь вільний простір посередині */
+        #video-container { position: relative; flex-grow: 1; background: #111; touch-action: none; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
         
-        /* Компактні кнопки */
-        #test-panel { height: 35vh; background: #111; padding: 4px; display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(2, 1fr); gap: 4px; }
-        .test-btn { background: #333; color: white; border: 1px solid #555; border-radius: 4px; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-        .test-btn:active { background: #555; }
+        /* Нижня панель кнопок: фіксована висота */
+        #test-panel { background: #111; padding: 5px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; height: 120px; flex-shrink: 0; border-top: 2px solid #333; }
+        .test-btn { background: #333; color: white; border: 1px solid #555; border-radius: 4px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        .test-btn:active { background: #d32f2f; }
     </style>
 </head>
 <body>
@@ -34,13 +36,13 @@
     <div id="status-panel">
         <div style="display:flex; justify-content: space-between; align-items: center;">
             <strong>🔔 ПАЛАТИ:</strong>
-            <span class="ver-info">v3.6 [16:55:10]</span>
+            <span class="ver-info">v3.7 [17:15:00]</span>
         </div>
         <div id="calls-display">ПОРОЖНЬО</div>
         <button class="main-btn btn-reset" onclick="clearCalls()">ОЧИСТИТИ ВСЕ</button>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-            <button class="main-btn btn-reload" onclick="forceReload()">ОНОВИТИ (v=)</button>
-            <button id="pause-btn" class="main-btn btn-pause" onclick="togglePause()">ПАУЗА АВТО</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <button class="main-btn btn-util btn-reload" onclick="forceReload()">ОНОВИТИ (v=)</button>
+            <button id="pause-btn" class="main-btn btn-util btn-pause" onclick="togglePause()">ПАУЗА АВТО</button>
         </div>
     </div>
 
@@ -87,12 +89,15 @@
                 const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 circle.setAttribute("cx", zone.x + "%");
                 circle.setAttribute("cy", zone.y + "%");
-                circle.setAttribute("r", "18"); 
+                circle.setAttribute("r", "20"); 
                 circle.setAttribute("fill", zone.lastActive ? "rgba(255, 0, 0, 0.7)" : "rgba(0, 255, 0, 0.4)");
                 circle.setAttribute("stroke", "white");
-                circle.setAttribute("stroke-width", "3");
+                circle.setAttribute("stroke-width", "2");
                 
-                circle.onpointerdown = (e) => { selectedPoint = index; circle.setPointerCapture(e.pointerId); };
+                circle.onpointerdown = (e) => { 
+                    selectedPoint = index; 
+                    circle.setPointerCapture(e.pointerId);
+                };
                 circle.onpointermove = (e) => {
                     if (selectedPoint === index) {
                         const rect = overlay.getBoundingClientRect();
@@ -125,25 +130,41 @@
 
         async function startCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: { ideal: 1280 } } 
+                });
                 video.srcObject = stream;
             } catch (err) { console.error("Cam error"); }
         }
 
         function processFrame() {
             if (!isPaused && video.readyState === video.HAVE_ENOUGH_DATA) {
+                // Використовуємо реальні розміри відеопотоку
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
                 let stateChanged = false;
                 zones.forEach(zone => {
+                    // Розраховуємо координати відносно реального розміру відео
                     const x = Math.floor(canvas.width * zone.x / 100);
                     const y = Math.floor(canvas.height * zone.y / 100);
-                    const pixel = ctx.getImageData(x, y, 1, 1).data;
-                    const brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
-                    const isActive = brightness > 190;
-                    if (isActive && !zone.lastActive) { registerCall(zone.id); stateChanged = true; }
-                    if (isActive !== zone.lastActive) { zone.lastActive = isActive; stateChanged = true; }
+                    
+                    // Захист від виходу за межі масиву
+                    if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+                        const pixel = ctx.getImageData(x, y, 1, 1).data;
+                        const brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
+                        const isActive = brightness > 195;
+                        
+                        if (isActive && !zone.lastActive) { 
+                            registerCall(zone.id); 
+                            stateChanged = true;
+                        }
+                        if (isActive !== zone.lastActive) {
+                            zone.lastActive = isActive;
+                            stateChanged = true;
+                        }
+                    }
                 });
                 if (stateChanged) drawMarkers();
             }

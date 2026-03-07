@@ -2,27 +2,29 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Vellez Simple Monitor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vellez Mobile v12.0</title>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; }
         
-        /* Велике табло */
-        #display { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 15vw; color: #0f0; font-weight: bold; }
+        /* Відео область — тепер головна */
+        #video-container { position: relative; width: 100%; flex-grow: 1; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
-        /* Відео */
-        #video-wrap { position: relative; width: 100%; background: #111; }
-        video { width: 100%; height: auto; display: block; }
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        /* Панель керування */
+        .controls { background: #1a1a1a; padding: 15px; display: flex; flex-direction: column; gap: 12px; border-top: 2px solid #333; }
+        
+        /* Слайдери стали великими */
+        .slider-box { display: flex; flex-direction: column; gap: 4px; }
+        .label-row { display: flex; justify-content: space-between; font-size: 14px; color: #0f0; font-weight: bold; }
+        input[type=range] { width: 100%; height: 40px; } /* Висока область дотику */
 
-        /* Панель налаштувань (ЗАВЖДИ ВИДИМА) */
-        .controls { background: #1a1a1a; padding: 15px; border-top: 2px solid #333; }
-        .slider-row { margin-bottom: 15px; }
-        .slider-row label { display: block; font-size: 14px; margin-bottom: 5px; color: #aaa; }
-        input[type=range] { width: 100%; height: 30px; }
+        /* Табло викликів (компактне зверху або знизу) */
+        #call-status { background: #222; padding: 10px; text-align: center; font-size: 24px; font-weight: bold; color: #0f0; border-bottom: 1px solid #444; }
 
-        /* Кнопки */
-        .btn-row { display: flex; gap: 10px; }
-        button { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; color: white; }
+        .btn-group { display: flex; gap: 10px; }
+        button { flex: 1; padding: 18px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; color: white; }
         #start-btn { background: #28a745; }
         .btn-stop { background: #dc3545 !important; }
         .btn-clear { background: #444; }
@@ -30,126 +32,108 @@
 </head>
 <body>
 
-    <div id="display">ПАУЗА</div>
+    <div id="call-status">ГОТОВИЙ</div>
 
-    <div id="video-wrap">
+    <div id="video-container">
         <video id="video" autoplay playsinline muted></video>
         <svg id="overlay"></svg>
     </div>
 
     <div class="controls">
-        <div class="slider-row">
-            <label>РОЗМІР ТОЧОК: <span id="size-v">15</span></label>
-            <input type="range" id="sizeRange" min="5" max="60" value="15" oninput="updateLayout()">
+        <div class="slider-box">
+            <div class="label-row"><span>РОЗМІР ТОЧОК</span><span id="sv">15</span></div>
+            <input type="range" id="sizeRange" min="5" max="80" value="15" oninput="update()">
         </div>
-        <div class="slider-row">
-            <label>ВІДСТАНЬ МІЖ НИМИ: <span id="gap-v">8.8</span></label>
-            <input type="range" id="gapRange" min="2" max="15" value="8.8" step="0.1" oninput="updateLayout()">
+        <div class="slider-box">
+            <div class="label-row"><span>ВІДСТАНЬ</span><span id="gv">8.8</span></div>
+            <input type="range" id="gapRange" min="2" max="15" value="8.8" step="0.1" oninput="update()">
         </div>
-        <div class="slider-row" style="display:none;"> <input type="range" id="sensRange" min="30" max="150" value="80">
-        </div>
-
-        <div class="btn-row">
-            <button id="start-btn" onclick="toggleEngine()">▶️ СТАРТ АНАЛІЗУ</button>
-            <button class="btn-clear" onclick="clearCalls()">ОЧИСТИТИ</button>
+        
+        <div class="btn-group">
+            <button id="start-btn" onclick="toggle()">▶ СТАРТ</button>
+            <button class="btn-clear" onclick="clearC()">СКИДАННЯ</button>
         </div>
     </div>
 
     <script>
-        const TELEGRAM_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
-        const TELEGRAM_CHAT_ID = '-5292414189'; // Твій Chat ID групи Mental
+        const TG_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
+        const TG_ID = '-5292414189'; // Твій ID групи Mental
 
-        let isRunning = false;
-        let callList = [];
-        let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, lastActive: false }));
+        let running = false;
+        let calls = [];
+        let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, active: false }));
 
-        const video = document.getElementById('video');
-        const display = document.getElementById('display');
-        const overlay = document.getElementById('overlay');
-        const procCanvas = document.createElement('canvas');
-        const procCtx = procCanvas.getContext('2d');
+        const v = document.getElementById('video');
+        const st = document.getElementById('call-status');
+        const ov = document.getElementById('overlay');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
-        function updateLayout() {
+        function update() {
             const gap = parseFloat(document.getElementById('gapRange').value);
             const size = document.getElementById('sizeRange').value;
-            document.getElementById('gap-v').innerText = gap;
-            document.getElementById('size-v').innerText = size;
-            
-            zones.forEach((zone, i) => {
-                zone.x = 10 + (i * gap); 
-            });
-            drawMarkers(size);
+            document.getElementById('gv').innerText = gap;
+            document.getElementById('sv').innerText = size;
+            zones.forEach((z, i) => { z.x = 10 + (i * gap); });
+            draw(size);
         }
 
-        function drawMarkers(size) {
-            overlay.innerHTML = '';
-            zones.forEach(zone => {
+        function draw(size) {
+            ov.innerHTML = '';
+            zones.forEach(z => {
                 const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                c.setAttribute("cx", zone.x + "%");
-                c.setAttribute("cy", zone.y + "%");
-                c.setAttribute("r", size);
-                c.setAttribute("fill", "rgba(0, 255, 0, 0.4)");
+                c.setAttribute("cx", z.x + "%"); c.setAttribute("cy", z.y + "%");
+                c.setAttribute("r", size); c.setAttribute("fill", "rgba(0,255,0,0.4)");
                 c.setAttribute("stroke", "white");
-                overlay.appendChild(c);
+                ov.appendChild(c);
             });
         }
 
-        function toggleEngine() {
-            isRunning = !isRunning;
-            const btn = document.getElementById('start-btn');
-            btn.innerText = isRunning ? "🛑 ЗУПИНИТИ" : "▶️ СТАРТ АНАЛІЗУ";
-            btn.classList.toggle('btn-stop', isRunning);
-            display.innerText = isRunning ? "ГОТОВИЙ" : "ПАУЗА";
-            if(isRunning) callList = [];
+        function toggle() {
+            running = !running;
+            const b = document.getElementById('start-btn');
+            b.innerText = running ? "🛑 СТОП" : "▶ СТАРТ";
+            b.classList.toggle('btn-stop', running);
+            st.innerText = running ? "АНАЛІЗ..." : "ПАУЗА";
         }
 
-        function sendTelegram(id) {
-            if (!isRunning) return;
-            fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent('🚨 ВИКЛИК: Палата №' + id)}`);
+        function send(id) {
+            if (!running) return;
+            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ПАЛАТА №' + id)}`);
         }
 
-        async function init() {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
-            video.srcObject = stream;
-            updateLayout();
-            requestAnimationFrame(process);
+        async function start() {
+            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
+            v.srcObject = s;
+            update();
+            loop();
         }
 
-        function process() {
-            if (isRunning && video.readyState === video.HAVE_ENOUGH_DATA) {
-                procCanvas.width = video.videoWidth;
-                procCanvas.height = video.videoHeight;
-                procCtx.drawImage(video, 0, 0);
-
-                zones.forEach(zone => {
-                    const x = Math.floor(procCanvas.width * zone.x / 100);
-                    const y = Math.floor(procCanvas.height * zone.y / 100);
-                    const p = procCtx.getImageData(x, y, 1, 1).data;
-                    
-                    const greenIntensity = p[1] - (p[0] + p[2]) / 2;
-                    const active = greenIntensity > 80;
-
-                    if (active && !zone.lastActive) {
-                        if (callList[callList.length - 1] !== zone.id) {
-                            callList.push(zone.id);
-                            sendTelegram(zone.id);
-                            updateUI();
+        function loop() {
+            if (running && v.readyState === 4) {
+                canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+                ctx.drawImage(v, 0, 0);
+                zones.forEach(z => {
+                    const x = Math.floor(canvas.width * z.x / 100);
+                    const y = Math.floor(canvas.height * z.y / 100);
+                    const p = ctx.getImageData(x, y, 1, 1).data;
+                    if ((p[1] - (p[0] + p[2]) / 2) > 80) { // Зелений
+                        if (!z.active) {
+                            if (calls[calls.length-1] !== z.id) {
+                                calls.push(z.id);
+                                send(z.id);
+                                st.innerText = calls.slice(-3).reverse().join(", ");
+                            }
+                            z.active = true;
                         }
-                    }
-                    zone.lastActive = active;
+                    } else { z.active = false; }
                 });
             }
-            requestAnimationFrame(process);
+            requestAnimationFrame(loop);
         }
 
-        function updateUI() {
-            const text = [...new Set(callList)].slice(-3).reverse().join(", ");
-            display.innerText = text || "ГОТОВИЙ";
-            display.style.color = text ? "#f00" : "#0f0";
-        }
-
-        function clearCalls() { callList = []; updateUI(); }
-        init();
+        function clearC() { calls = []; st.innerText = "ГОТОВИЙ"; }
+        start();
     </script>
 </body>
 </html>

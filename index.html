@@ -2,31 +2,30 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Vellez Smart v10.0</title>
+    <title>Vellez Simple Monitor</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #display { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 12vw; color: #0f0; text-align: center; font-weight: bold; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
         
-        /* Панель налаштувань */
-        #settings-panel { 
-            background: #1a1a1a; padding: 15px; display: none; 
-            flex-direction: column; gap: 10px; border-top: 2px solid #333;
-        }
-        .control-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
-        input[type=range] { flex-grow: 1; }
+        /* Велике табло */
+        #display { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 15vw; color: #0f0; font-weight: bold; }
 
-        /* Відео-контейнер */
-        #video-wrap { position: relative; width: 100%; max-height: 40vh; background: #000; display: flex; justify-content: center; }
+        /* Відео */
+        #video-wrap { position: relative; width: 100%; background: #111; }
         video { width: 100%; height: auto; display: block; }
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* Панель налаштувань (ЗАВЖДИ ВИДИМА) */
+        .controls { background: #1a1a1a; padding: 15px; border-top: 2px solid #333; }
+        .slider-row { margin-bottom: 15px; }
+        .slider-row label { display: block; font-size: 14px; margin-bottom: 5px; color: #aaa; }
+        input[type=range] { width: 100%; height: 30px; }
 
         /* Кнопки */
-        .ui-main { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; background: #111; }
-        button { padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; }
-        .btn-start { background: #28a745; grid-column: span 2; font-size: 18px; }
+        .btn-row { display: flex; gap: 10px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; color: white; }
+        #start-btn { background: #28a745; }
         .btn-stop { background: #dc3545 !important; }
-        .btn-util { background: #444; }
-        .btn-settings { background: #007bff; }
+        .btn-clear { background: #444; }
     </style>
 </head>
 <body>
@@ -38,30 +37,27 @@
         <svg id="overlay"></svg>
     </div>
 
-    <div id="settings-panel">
-        <div class="control-row">
-            <label>Розмір точок:</label>
-            <input type="range" id="sizeRange" min="5" max="50" value="15" oninput="updateLayout()">
+    <div class="controls">
+        <div class="slider-row">
+            <label>РОЗМІР ТОЧОК: <span id="size-v">15</span></label>
+            <input type="range" id="sizeRange" min="5" max="60" value="15" oninput="updateLayout()">
         </div>
-        <div class="control-row">
-            <label>Відстань між ними:</label>
-            <input type="range" id="gapRange" min="2" max="15" value="8" step="0.1" oninput="updateLayout()">
+        <div class="slider-row">
+            <label>ВІДСТАНЬ МІЖ НИМИ: <span id="gap-v">8.8</span></label>
+            <input type="range" id="gapRange" min="2" max="15" value="8.8" step="0.1" oninput="updateLayout()">
         </div>
-        <div class="control-row">
-            <label>Чутливість (зелений):</label>
-            <input type="range" id="sensRange" min="30" max="150" value="80" oninput="updateSens()">
+        <div class="slider-row" style="display:none;"> <input type="range" id="sensRange" min="30" max="150" value="80">
         </div>
-    </div>
 
-    <div class="ui-main">
-        <button id="start-btn" class="btn-start" onclick="toggleEngine()">▶️ ЗАПУСТИТИ АНАЛІЗ</button>
-        <button class="btn-util" onclick="clearCalls()">ОЧИСТИТИ (SPACE)</button>
-        <button class="btn-settings" onclick="toggleSettings()">⚙️ НАЛАШТУВАННЯ</button>
+        <div class="btn-row">
+            <button id="start-btn" onclick="toggleEngine()">▶️ СТАРТ АНАЛІЗУ</button>
+            <button class="btn-clear" onclick="clearCalls()">ОЧИСТИТИ</button>
+        </div>
     </div>
 
     <script>
         const TELEGRAM_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
-        const TELEGRAM_CHAT_ID = '-1002345678912'; // Сюди встав ID групи з мінусом
+        const TELEGRAM_CHAT_ID = '-5292414189'; // Твій Chat ID групи Mental
 
         let isRunning = false;
         let callList = [];
@@ -73,25 +69,26 @@
         const procCanvas = document.createElement('canvas');
         const procCtx = procCanvas.getContext('2d');
 
-        // Оновлення геометрії точок через слайдери
         function updateLayout() {
             const gap = parseFloat(document.getElementById('gapRange').value);
             const size = document.getElementById('sizeRange').value;
+            document.getElementById('gap-v').innerText = gap;
+            document.getElementById('size-v').innerText = size;
             
             zones.forEach((zone, i) => {
-                zone.x = 10 + (i * gap); // Початковий відступ 10% + крок
+                zone.x = 10 + (i * gap); 
             });
             drawMarkers(size);
         }
 
-        function drawMarkers(size = 15) {
+        function drawMarkers(size) {
             overlay.innerHTML = '';
             zones.forEach(zone => {
                 const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 c.setAttribute("cx", zone.x + "%");
                 c.setAttribute("cy", zone.y + "%");
                 c.setAttribute("r", size);
-                c.setAttribute("fill", "rgba(0, 255, 0, 0.3)");
+                c.setAttribute("fill", "rgba(0, 255, 0, 0.4)");
                 c.setAttribute("stroke", "white");
                 overlay.appendChild(c);
             });
@@ -100,14 +97,10 @@
         function toggleEngine() {
             isRunning = !isRunning;
             const btn = document.getElementById('start-btn');
-            btn.innerText = isRunning ? "🛑 ЗУПИНИТИ" : "▶️ ЗАПУСТИТИ АНАЛІЗ";
+            btn.innerText = isRunning ? "🛑 ЗУПИНИТИ" : "▶️ СТАРТ АНАЛІЗУ";
             btn.classList.toggle('btn-stop', isRunning);
             display.innerText = isRunning ? "ГОТОВИЙ" : "ПАУЗА";
-        }
-
-        function toggleSettings() {
-            const panel = document.getElementById('settings-panel');
-            panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
+            if(isRunning) callList = [];
         }
 
         function sendTelegram(id) {
@@ -116,7 +109,7 @@
         }
 
         async function init() {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
             video.srcObject = stream;
             updateLayout();
             requestAnimationFrame(process);
@@ -134,7 +127,7 @@
                     const p = procCtx.getImageData(x, y, 1, 1).data;
                     
                     const greenIntensity = p[1] - (p[0] + p[2]) / 2;
-                    const active = greenIntensity > document.getElementById('sensRange').value;
+                    const active = greenIntensity > 80;
 
                     if (active && !zone.lastActive) {
                         if (callList[callList.length - 1] !== zone.id) {
@@ -156,8 +149,6 @@
         }
 
         function clearCalls() { callList = []; updateUI(); }
-        window.onkeydown = (e) => { if(e.code === 'Space') clearCalls(); };
-
         init();
     </script>
 </body>

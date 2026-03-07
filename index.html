@@ -3,21 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Smart Monitor v15.0</title>
+    <title>Vellez Smart Monitor v15.2</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+        
+        /* Зона списку - нові виклики додаються СПРАВА */
         #status-area { height: 15vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; padding: 0 10px; }
-        #call-display { font-size: 9vw; color: #0f0; font-weight: bold; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; }
+        #call-display { font-size: 9vw; color: #f44; font-weight: bold; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; }
+
         #cam-box { position: relative; flex-grow: 1; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
         .ui-panel { background: #1a1a1a; padding: 10px; border-top: 1px solid #333; flex-shrink: 0; }
         #settings-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
         .s-label { display: flex; justify-content: space-between; font-size: 14px; color: #0f0; font-weight: bold; }
         input[type=range] { width: 100%; height: 45px; margin: 0; cursor: pointer; } 
+
         .test-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
         .t-btn { background: #333; border: 1px solid #555; border-radius: 8px; padding: 15px 0; color: white; font-weight: bold; font-size: 18px; touch-action: manipulation; }
         .t-btn:active { background: #007bff; transform: scale(0.95); }
+
         .btn-row { display: flex; gap: 10px; }
         button { padding: 18px; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; }
         .btn-start { background: #28a745; flex: 3; }
@@ -41,11 +47,11 @@
         <div id="settings-group">
             <div>
                 <div class="s-label"><span>РОЗМІР ТОЧОК</span><span id="v-size">20</span></div>
-                <input type="range" id="sizeRange" min="5" max="120" value="20" oninput="updateUI()">
+                <input type="range" id="sizeRange" min="5" max="120" value="20" oninput="updateMarkers()">
             </div>
             <div>
-                <div class="s-label"><span>ВІДСТАНЬ</span><span id="v-gap">9.0</span></div>
-                <input type="range" id="gapRange" min="2" max="18" value="9.0" step="0.1" oninput="updateUI()">
+                <div class="s-label"><span>ВІДСТАНЬ (КРОК)</span><span id="v-gap">9.0</span></div>
+                <input type="range" id="gapRange" min="2" max="18" value="9.0" step="0.1" oninput="updateMarkers()">
             </div>
             
             <div class="test-grid">
@@ -65,7 +71,7 @@
         <div class="btn-row">
             <button class="btn-gear" onclick="toggleSettings()">⚙️</button>
             <button id="start-btn" class="btn-start" onclick="toggleStart()">▶ СТАРТ</button>
-            <button class="btn-clear" onclick="resetCalls()">СКИДАННЯ</button>
+            <button class="btn-clear" onclick="resetSystem()">СКИДАННЯ</button>
         </div>
     </div>
 
@@ -74,63 +80,61 @@
         const TG_ID = '-5292414189';
 
         let isRunning = false;
-        let callData = []; // Масив об'єктів {id, count}
+        let callData = []; // Останні 5 палат: [{id, count}]
         let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, active: false }));
 
-        const vid = document.getElementById('video');
-        const disp = document.getElementById('call-display');
-        const ov = document.getElementById('overlay');
-        const canv = document.createElement('canvas');
-        const ctx = canv.getContext('2d', { willReadFrequently: true });
+        const video = document.getElementById('video');
+        const display = document.getElementById('call-display');
+        const overlay = document.getElementById('overlay');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-        // Головна функція реєстрації (працює і для кнопок, і для камери)
-        function registerCall(id, fromCamera = false) {
-            // Якщо з камери, але аналіз вимкнено - ігноруємо
-            if (fromCamera && !isRunning) return;
+        function registerCall(id, isAuto = false) {
+            if (isAuto && !isRunning) return;
 
             // Відправка в Telegram
-            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ВИКЛИК: Палата №' + id)}`)
-                .catch(e => console.error("Telegram Error"));
+            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ПАЛАТА №' + id)}`)
+                .catch(e => console.error("TG Error"));
 
-            // Логіка списку: шукаємо, чи є вже ця палата в активних 5
-            let index = callData.findIndex(item => item.id === id);
+            // Логіка черги: нові СПРАВА
+            let existingIndex = callData.findIndex(item => item.id === id);
             
-            if (index !== -1) {
-                // Якщо є - збільшуємо лічильник і переносимо в кінець черги
-                callData[index].count++;
-                let item = callData.splice(index, 1)[0];
-                callData.push(item);
+            if (existingIndex !== -1) {
+                // Якщо вже є - збільшуємо лічильник і переміщуємо в КІНЕЦЬ (справа)
+                callData[existingIndex].count++;
+                let item = callData.splice(existingIndex, 1)[0];
+                callData.push(item); 
             } else {
-                // Якщо немає - додаємо нову в кінець
+                // Якщо немає - додаємо в КІНЕЦЬ (справа)
                 callData.push({ id: id, count: 1 });
             }
 
-            // Тримаємо тільки останні 5 унікальних
+            // Обмежуємо список 5-ма елементами
             if (callData.length > 5) {
-                callData.shift();
+                callData.shift(); // Видаляємо найстаріший (зліва)
             }
 
-            renderText();
+            updateDisplayText();
             if (navigator.vibrate) navigator.vibrate(50);
         }
 
-        function renderText() {
+        function updateDisplayText() {
             if (callData.length === 0) {
-                disp.innerText = isRunning ? "ГОТОВИЙ" : "ПАУЗА";
-                disp.style.color = "#0f0";
+                display.innerText = isRunning ? "ГОТОВИЙ" : "ПАУЗА";
+                display.style.color = "#0f0";
                 return;
             }
 
-            // Формуємо рядок типу 1, 2(2), 5
+            // Формуємо рядок: старий, ..., новий(N)
             const output = callData.map(item => {
                 return item.count > 1 ? `${item.id}(${item.count})` : `${item.id}`;
             }).join(", ");
 
-            disp.innerText = output;
-            disp.style.color = "#f44";
+            display.innerText = output;
+            display.style.color = "#f44";
         }
 
-        function updateUI() {
+        function updateMarkers() {
             const gap = parseFloat(document.getElementById('gapRange').value);
             const size = document.getElementById('sizeRange').value;
             document.getElementById('v-gap').innerText = gap;
@@ -138,19 +142,19 @@
             
             zones.forEach((z, i) => { z.x = 10 + (i * gap); });
             
-            ov.innerHTML = '';
+            overlay.innerHTML = '';
             zones.forEach(z => {
                 const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 c.setAttribute("cx", z.x + "%"); c.setAttribute("cy", z.y + "%");
                 c.setAttribute("r", size); c.setAttribute("fill", "rgba(0,255,0,0.4)");
                 c.setAttribute("stroke", "white");
-                ov.appendChild(c);
+                overlay.appendChild(c);
             });
         }
 
         function toggleSettings() {
-            const gs = document.getElementById('settings-group');
-            gs.style.display = (gs.style.display === 'none') ? 'flex' : 'none';
+            const group = document.getElementById('settings-group');
+            group.style.display = (group.style.display === 'none') ? 'flex' : 'none';
         }
 
         function toggleStart() {
@@ -158,29 +162,29 @@
             const btn = document.getElementById('start-btn');
             btn.innerText = isRunning ? "🛑 СТОП" : "▶ СТАРТ";
             btn.classList.toggle('btn-stop', isRunning);
-            renderText();
+            updateDisplayText();
         }
 
-        async function init() {
+        async function startCamera() {
             try {
-                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
-                vid.srcObject = s;
-                updateUI();
-                loop();
-            } catch (e) { disp.innerText = "КАМЕРА ПІД КЛЮЧЕМ"; }
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
+                video.srcObject = stream;
+                updateMarkers();
+                requestAnimationFrame(analyzeFrame);
+            } catch (e) { display.innerText = "ПОМИЛКА КАМЕРИ"; }
         }
 
-        function loop() {
-            if (isRunning && vid.readyState === 4) {
-                canv.width = vid.videoWidth; canv.height = vid.videoHeight;
-                ctx.drawImage(vid, 0, 0);
+        function analyzeFrame() {
+            if (isRunning && video.readyState === 4) {
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0);
                 zones.forEach(z => {
-                    const x = Math.floor(canv.width * z.x / 100);
-                    const y = Math.floor(canv.height * z.y / 100);
+                    const x = Math.floor(canvas.width * z.x / 100);
+                    const y = Math.floor(canvas.height * z.y / 100);
                     const p = ctx.getImageData(x, y, 1, 1).data;
                     const green = p[1] - (p[0] + p[2]) / 2;
 
-                    if (green > 80) {
+                    if (green > 80) { 
                         if (!z.active) {
                             registerCall(z.id, true);
                             z.active = true;
@@ -188,15 +192,15 @@
                     } else { z.active = false; }
                 });
             }
-            requestAnimationFrame(loop);
+            requestAnimationFrame(analyzeFrame);
         }
 
-        function resetCalls() {
+        function resetSystem() {
             callData = [];
-            renderText();
+            updateDisplayText();
         }
 
-        init();
+        startCamera();
     </script>
 </body>
 </html>

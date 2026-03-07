@@ -3,137 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Mobile v12.0</title>
+    <title>Vellez Final v13.0</title>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; }
+        /* Основна структура на Flexbox для вписування в один екран */
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
         
-        /* Відео область — тепер головна */
-        #video-container { position: relative; width: 100%; flex-grow: 1; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        /* Зона списку палат (Верх) */
+        #status-area { height: 15vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; }
+        #call-display { font-size: 10vw; color: #0f0; font-weight: bold; text-align: center; }
+
+        /* Відео-зона (Центр) */
+        #cam-box { position: relative; flex-grow: 1; background: #000; overflow: hidden; display: flex; align-items: center; }
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
-        /* Панель керування */
-        .controls { background: #1a1a1a; padding: 15px; display: flex; flex-direction: column; gap: 12px; border-top: 2px solid #333; }
+        /* Панель керування (Низ) */
+        .ui-panel { background: #1a1a1a; padding: 10px; border-top: 1px solid #333; }
         
-        /* Слайдери стали великими */
-        .slider-box { display: flex; flex-direction: column; gap: 4px; }
-        .label-row { display: flex; justify-content: space-between; font-size: 14px; color: #0f0; font-weight: bold; }
-        input[type=range] { width: 100%; height: 40px; } /* Висока область дотику */
+        /* Великі слайдери */
+        #settings-box { display: none; flex-direction: column; gap: 15px; padding: 15px 0; }
+        .s-label { display: flex; justify-content: space-between; font-size: 16px; color: #0f0; margin-bottom: 5px; }
+        input[type=range] { width: 100%; height: 45px; margin: 0; cursor: pointer; } 
 
-        /* Табло викликів (компактне зверху або знизу) */
-        #call-status { background: #222; padding: 10px; text-align: center; font-size: 24px; font-weight: bold; color: #0f0; border-bottom: 1px solid #444; }
-
-        .btn-group { display: flex; gap: 10px; }
-        button { flex: 1; padding: 18px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; color: white; }
-        #start-btn { background: #28a745; }
+        /* Кнопки */
+        .btn-row { display: flex; gap: 10px; margin-top: 5px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; color: white; }
+        .btn-start { background: #28a745; flex: 2; }
         .btn-stop { background: #dc3545 !important; }
         .btn-clear { background: #444; }
+        .btn-gear { background: #007bff; flex: 0.5; max-width: 60px; font-size: 24px; }
     </style>
 </head>
 <body>
 
-    <div id="call-status">ГОТОВИЙ</div>
+    <div id="status-area">
+        <div id="call-display">ГОТОВИЙ</div>
+    </div>
 
-    <div id="video-container">
+    <div id="cam-box">
         <video id="video" autoplay playsinline muted></video>
         <svg id="overlay"></svg>
     </div>
 
-    <div class="controls">
-        <div class="slider-box">
-            <div class="label-row"><span>РОЗМІР ТОЧОК</span><span id="sv">15</span></div>
-            <input type="range" id="sizeRange" min="5" max="80" value="15" oninput="update()">
+    <div class="ui-panel">
+        <div id="settings-box">
+            <div>
+                <div class="s-label"><span>РОЗМІР ТОЧОК</span><span id="v-size">25</span></div>
+                <input type="range" id="sizeRange" min="5" max="100" value="25" oninput="upd()">
+            </div>
+            <div>
+                <div class="s-label"><span>ВІДСТАНЬ</span><span id="v-gap">8.8</span></div>
+                <input type="range" id="gapRange" min="2" max="15" value="8.8" step="0.1" oninput="upd()">
+            </div>
         </div>
-        <div class="slider-box">
-            <div class="label-row"><span>ВІДСТАНЬ</span><span id="gv">8.8</span></div>
-            <input type="range" id="gapRange" min="2" max="15" value="8.8" step="0.1" oninput="update()">
-        </div>
-        
-        <div class="btn-group">
-            <button id="start-btn" onclick="toggle()">▶ СТАРТ</button>
-            <button class="btn-clear" onclick="clearC()">СКИДАННЯ</button>
+
+        <div class="btn-row">
+            <button class="btn-gear" onclick="toggleS()">⚙️</button>
+            <button id="start-btn" class="btn-start" onclick="run()">▶ СТАРТ</button>
+            <button class="btn-clear" onclick="res()">СКИДАННЯ</button>
         </div>
     </div>
 
     <script>
         const TG_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
-        const TG_ID = '-5292414189'; // Твій ID групи Mental
+        const TG_ID = '-5292414189';
 
-        let running = false;
-        let calls = [];
-        let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, active: false }));
+        let active = false;
+        let callList = [];
+        let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, on: false }));
 
-        const v = document.getElementById('video');
-        const st = document.getElementById('call-status');
+        const vid = document.getElementById('video');
+        const disp = document.getElementById('call-display');
         const ov = document.getElementById('overlay');
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        const canv = document.createElement('canvas');
+        const ctx = canv.getContext('2d');
 
-        function update() {
+        function upd() {
             const gap = parseFloat(document.getElementById('gapRange').value);
             const size = document.getElementById('sizeRange').value;
-            document.getElementById('gv').innerText = gap;
-            document.getElementById('sv').innerText = size;
+            document.getElementById('v-gap').innerText = gap;
+            document.getElementById('v-size').innerText = size;
             zones.forEach((z, i) => { z.x = 10 + (i * gap); });
             draw(size);
         }
 
-        function draw(size) {
+        function draw(s) {
             ov.innerHTML = '';
             zones.forEach(z => {
                 const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 c.setAttribute("cx", z.x + "%"); c.setAttribute("cy", z.y + "%");
-                c.setAttribute("r", size); c.setAttribute("fill", "rgba(0,255,0,0.4)");
+                c.setAttribute("r", s); c.setAttribute("fill", "rgba(0,255,0,0.4)");
                 c.setAttribute("stroke", "white");
                 ov.appendChild(c);
             });
         }
 
-        function toggle() {
-            running = !running;
+        function toggleS() {
+            const box = document.getElementById('settings-box');
+            box.style.display = (box.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        function run() {
+            active = !active;
             const b = document.getElementById('start-btn');
-            b.innerText = running ? "🛑 СТОП" : "▶ СТАРТ";
-            b.classList.toggle('btn-stop', running);
-            st.innerText = running ? "АНАЛІЗ..." : "ПАУЗА";
+            b.innerText = active ? "🛑 СТОП" : "▶ СТАРТ";
+            b.classList.toggle('btn-stop', active);
+            disp.innerText = active ? (callList.join(",") || "АНАЛІЗ...") : "ПАУЗА";
         }
 
-        function send(id) {
-            if (!running) return;
-            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ПАЛАТА №' + id)}`);
-        }
-
-        async function start() {
+        async function init() {
             const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
-            v.srcObject = s;
-            update();
+            vid.srcObject = s;
+            upd();
             loop();
         }
 
         function loop() {
-            if (running && v.readyState === 4) {
-                canvas.width = v.videoWidth; canvas.height = v.videoHeight;
-                ctx.drawImage(v, 0, 0);
+            if (active && vid.readyState === 4) {
+                canv.width = vid.videoWidth; canv.height = vid.videoHeight;
+                ctx.drawImage(vid, 0, 0);
                 zones.forEach(z => {
-                    const x = Math.floor(canvas.width * z.x / 100);
-                    const y = Math.floor(canvas.height * z.y / 100);
+                    const x = Math.floor(canv.width * z.x / 100);
+                    const y = Math.floor(canv.height * z.y / 100);
                     const p = ctx.getImageData(x, y, 1, 1).data;
-                    if ((p[1] - (p[0] + p[2]) / 2) > 80) { // Зелений
-                        if (!z.active) {
-                            if (calls[calls.length-1] !== z.id) {
-                                calls.push(z.id);
-                                send(z.id);
-                                st.innerText = calls.slice(-3).reverse().join(", ");
+                    if ((p[1] - (p[0] + p[2]) / 2) > 80) {
+                        if (!z.on) {
+                            if (callList[callList.length-1] !== z.id) {
+                                callList.push(z.id);
+                                fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ПАЛАТА №' + z.id)}`);
+                                disp.innerText = callList.slice(-3).reverse().join(", ");
                             }
-                            z.active = true;
+                            z.on = true;
                         }
-                    } else { z.active = false; }
+                    } else { z.on = false; }
                 });
             }
             requestAnimationFrame(loop);
         }
 
-        function clearC() { calls = []; st.innerText = "ГОТОВИЙ"; }
-        start();
+        function res() { callList = []; disp.innerText = "ГОТОВИЙ"; }
+        init();
     </script>
 </body>
 </html>

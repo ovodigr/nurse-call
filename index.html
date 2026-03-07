@@ -3,35 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Final v13.0</title>
+    <title>Vellez Pro v13.5</title>
     <style>
-        /* Основна структура на Flexbox для вписування в один екран */
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
         
-        /* Зона списку палат (Верх) */
-        #status-area { height: 15vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; }
-        #call-display { font-size: 10vw; color: #0f0; font-weight: bold; text-align: center; }
+        /* Зона списку (Верх) */
+        #status-area { height: 12vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; }
+        #call-display { font-size: 8vw; color: #0f0; font-weight: bold; text-align: center; }
 
         /* Відео-зона (Центр) */
         #cam-box { position: relative; flex-grow: 1; background: #000; overflow: hidden; display: flex; align-items: center; }
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
+        /* Кнопка шестерні поверх відео */
+        .btn-gear { position: absolute; top: 10px; right: 10px; background: rgba(0,123,255,0.7); border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; color: white; cursor: pointer; z-index: 100; }
 
         /* Панель керування (Низ) */
-        .ui-panel { background: #1a1a1a; padding: 10px; border-top: 1px solid #333; }
+        .ui-panel { background: #1a1a1a; padding: 8px; border-top: 1px solid #333; }
         
-        /* Великі слайдери */
-        #settings-box { display: none; flex-direction: column; gap: 15px; padding: 15px 0; }
-        .s-label { display: flex; justify-content: space-between; font-size: 16px; color: #0f0; margin-bottom: 5px; }
-        input[type=range] { width: 100%; height: 45px; margin: 0; cursor: pointer; } 
+        /* Блок налаштувань, що ховається */
+        #settings-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+        .s-label { display: flex; justify-content: space-between; font-size: 14px; color: #0f0; }
+        input[type=range] { width: 100%; height: 35px; margin: 0; } 
 
-        /* Кнопки */
-        .btn-row { display: flex; gap: 10px; margin-top: 5px; }
-        button { flex: 1; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; color: white; }
-        .btn-start { background: #28a745; flex: 2; }
+        /* Сітка тестових кнопок */
+        .test-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 8px; }
+        .t-btn { background: #333; border: 1px solid #555; border-radius: 4px; padding: 10px 0; color: white; font-weight: bold; font-size: 14px; }
+        .t-btn:active { background: #d32f2f; }
+
+        /* Нижні головні кнопки */
+        .btn-row { display: flex; gap: 8px; }
+        button { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; color: white; }
+        .btn-start { background: #28a745; }
         .btn-stop { background: #dc3545 !important; }
         .btn-clear { background: #444; }
-        .btn-gear { background: #007bff; flex: 0.5; max-width: 60px; font-size: 24px; }
     </style>
 </head>
 <body>
@@ -41,24 +47,37 @@
     </div>
 
     <div id="cam-box">
+        <button class="btn-gear" onclick="toggleS()">⚙️</button>
         <video id="video" autoplay playsinline muted></video>
         <svg id="overlay"></svg>
     </div>
 
     <div class="ui-panel">
-        <div id="settings-box">
+        <div id="settings-group">
             <div>
-                <div class="s-label"><span>РОЗМІР ТОЧОК</span><span id="v-size">25</span></div>
-                <input type="range" id="sizeRange" min="5" max="100" value="25" oninput="upd()">
+                <div class="s-label"><span>РОЗМІР ТОЧОК</span><span id="v-size">16</span></div>
+                <input type="range" id="sizeRange" min="5" max="100" value="16" oninput="upd()">
             </div>
             <div>
-                <div class="s-label"><span>ВІДСТАНЬ</span><span id="v-gap">8.8</span></div>
-                <input type="range" id="gapRange" min="2" max="15" value="8.8" step="0.1" oninput="upd()">
+                <div class="s-label"><span>ВІДСТАНЬ</span><span id="v-gap">8.9</span></div>
+                <input type="range" id="gapRange" min="2" max="15" value="8.9" step="0.1" oninput="upd()">
+            </div>
+            
+            <div class="test-grid">
+                <button class="t-btn" onclick="reg(1)">1</button>
+                <button class="t-btn" onclick="reg(2)">2</button>
+                <button class="t-btn" onclick="reg(3)">3</button>
+                <button class="t-btn" onclick="reg(4)">4</button>
+                <button class="t-btn" onclick="reg(5)">5</button>
+                <button class="t-btn" onclick="reg(6)">6</button>
+                <button class="t-btn" onclick="reg(7)">7</button>
+                <button class="t-btn" onclick="reg(8)">8</button>
+                <button class="t-btn" onclick="reg(9)">9</button>
+                <button class="t-btn" onclick="reg(10)">10</button>
             </div>
         </div>
 
         <div class="btn-row">
-            <button class="btn-gear" onclick="toggleS()">⚙️</button>
             <button id="start-btn" class="btn-start" onclick="run()">▶ СТАРТ</button>
             <button class="btn-clear" onclick="res()">СКИДАННЯ</button>
         </div>
@@ -99,8 +118,16 @@
         }
 
         function toggleS() {
-            const box = document.getElementById('settings-box');
-            box.style.display = (box.style.display === 'flex') ? 'none' : 'flex';
+            const group = document.getElementById('settings-group');
+            group.style.display = (group.style.display === 'none') ? 'flex' : 'none';
+        }
+
+        function reg(id) {
+            if (callList[callList.length-1] !== id) {
+                callList.push(id);
+                fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ТЕСТ: Палата №' + id)}`);
+                updDisp();
+            }
         }
 
         function run() {
@@ -108,7 +135,12 @@
             const b = document.getElementById('start-btn');
             b.innerText = active ? "🛑 СТОП" : "▶ СТАРТ";
             b.classList.toggle('btn-stop', active);
-            disp.innerText = active ? (callList.join(",") || "АНАЛІЗ...") : "ПАУЗА";
+            updDisp();
+        }
+
+        function updDisp() {
+            const unique = [...new Set(callList)].slice(-3).reverse();
+            disp.innerText = active ? (unique.join(", ") || "АНАЛІЗ...") : "ПАУЗА";
         }
 
         async function init() {
@@ -128,11 +160,7 @@
                     const p = ctx.getImageData(x, y, 1, 1).data;
                     if ((p[1] - (p[0] + p[2]) / 2) > 80) {
                         if (!z.on) {
-                            if (callList[callList.length-1] !== z.id) {
-                                callList.push(z.id);
-                                fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ПАЛАТА №' + z.id)}`);
-                                disp.innerText = callList.slice(-3).reverse().join(", ");
-                            }
+                            reg(z.id);
                             z.on = true;
                         }
                     } else { z.on = false; }

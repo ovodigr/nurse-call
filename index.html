@@ -2,199 +2,163 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez v3.7</title>
+    <title>Vellez Smart v10.0</title>
     <style>
-        /* Використовуємо dvh (dynamic viewport height) для точного розрахунку на мобільних */
-        body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #display { flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 12vw; color: #0f0; text-align: center; font-weight: bold; }
         
-        /* Верхній блок: займає стільки, скільки треба контенту */
-        #status-panel { background: #1a1a1a; padding: 8px; border-bottom: 2px solid #333; flex-shrink: 0; }
-        #calls-display { font-size: 28px; color: #ff4444; font-weight: bold; min-height: 60px; max-height: 120px; overflow-y: auto; margin: 5px 0; border: 1px dashed #444; padding: 5px; }
-        
-        .main-btn { width: 100%; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
-        .btn-reset { background: #d32f2f; height: 50px; font-size: 20px; margin-bottom: 5px; }
-        .btn-util { height: 35px; font-size: 12px; }
-        .btn-reload { background: #007bff; }
-        .btn-pause { background: #444; }
-        .btn-pause.active { background: #fbc02d; color: #000; }
-        .ver-info { font-size: 10px; color: #00ff00; opacity: 0.8; }
+        /* Панель налаштувань */
+        #settings-panel { 
+            background: #1a1a1a; padding: 15px; display: none; 
+            flex-direction: column; gap: 10px; border-top: 2px solid #333;
+        }
+        .control-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+        input[type=range] { flex-grow: 1; }
 
-        /* Відео: займає весь вільний простір посередині */
-        #video-container { position: relative; flex-grow: 1; background: #111; touch-action: none; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        video { width: 100%; height: 100%; object-fit: contain; }
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
-        
-        /* Нижня панель кнопок: фіксована висота */
-        #test-panel { background: #111; padding: 5px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; height: 120px; flex-shrink: 0; border-top: 2px solid #333; }
-        .test-btn { background: #333; color: white; border: 1px solid #555; border-radius: 4px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-        .test-btn:active { background: #d32f2f; }
+        /* Відео-контейнер */
+        #video-wrap { position: relative; width: 100%; max-height: 40vh; background: #000; display: flex; justify-content: center; }
+        video { width: 100%; height: auto; display: block; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; }
+
+        /* Кнопки */
+        .ui-main { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; background: #111; }
+        button { padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-start { background: #28a745; grid-column: span 2; font-size: 18px; }
+        .btn-stop { background: #dc3545 !important; }
+        .btn-util { background: #444; }
+        .btn-settings { background: #007bff; }
     </style>
 </head>
 <body>
 
-    <div id="status-panel">
-        <div style="display:flex; justify-content: space-between; align-items: center;">
-            <strong>🔔 ПАЛАТИ:</strong>
-            <span class="ver-info">v3.7 [17:15:00]</span>
-        </div>
-        <div id="calls-display">ПОРОЖНЬО</div>
-        <button class="main-btn btn-reset" onclick="clearCalls()">ОЧИСТИТИ ВСЕ</button>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-            <button class="main-btn btn-util btn-reload" onclick="forceReload()">ОНОВИТИ (v=)</button>
-            <button id="pause-btn" class="main-btn btn-util btn-pause" onclick="togglePause()">ПАУЗА АВТО</button>
-        </div>
-    </div>
+    <div id="display">ПАУЗА</div>
 
-    <div id="video-container">
+    <div id="video-wrap">
         <video id="video" autoplay playsinline muted></video>
-        <canvas id="canvas" style="display:none;"></canvas>
         <svg id="overlay"></svg>
     </div>
 
-    <div id="test-panel">
-        <button class="test-btn" onclick="registerCall(1)">1</button>
-        <button class="test-btn" onclick="registerCall(2)">2</button>
-        <button class="test-btn" onclick="registerCall(3)">3</button>
-        <button class="test-btn" onclick="registerCall(4)">4</button>
-        <button class="test-btn" onclick="registerCall(5)">5</button>
-        <button class="test-btn" onclick="registerCall(6)">6</button>
-        <button class="test-btn" onclick="registerCall(7)">7</button>
-        <button class="test-btn" onclick="registerCall(8)">8</button>
-        <button class="test-btn" onclick="registerCall(9)">9</button>
-        <button class="test-btn" onclick="registerCall(10)">10</button>
+    <div id="settings-panel">
+        <div class="control-row">
+            <label>Розмір точок:</label>
+            <input type="range" id="sizeRange" min="5" max="50" value="15" oninput="updateLayout()">
+        </div>
+        <div class="control-row">
+            <label>Відстань між ними:</label>
+            <input type="range" id="gapRange" min="2" max="15" value="8" step="0.1" oninput="updateLayout()">
+        </div>
+        <div class="control-row">
+            <label>Чутливість (зелений):</label>
+            <input type="range" id="sensRange" min="30" max="150" value="80" oninput="updateSens()">
+        </div>
+    </div>
+
+    <div class="ui-main">
+        <button id="start-btn" class="btn-start" onclick="toggleEngine()">▶️ ЗАПУСТИТИ АНАЛІЗ</button>
+        <button class="btn-util" onclick="clearCalls()">ОЧИСТИТИ (SPACE)</button>
+        <button class="btn-settings" onclick="toggleSettings()">⚙️ НАЛАШТУВАННЯ</button>
     </div>
 
     <script>
+        const TELEGRAM_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
+        const TELEGRAM_CHAT_ID = '-1002345678912'; // Сюди встав ID групи з мінусом
+
+        let isRunning = false;
+        let callList = [];
+        let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, lastActive: false }));
+
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
+        const display = document.getElementById('display');
         const overlay = document.getElementById('overlay');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const display = document.getElementById('calls-display');
-        const pauseBtn = document.getElementById('pause-btn');
-        
-        let callRegistry = {};
-        let isPaused = false;
-        let selectedPoint = null;
+        const procCanvas = document.createElement('canvas');
+        const procCtx = procCanvas.getContext('2d');
 
-        let savedZones = localStorage.getItem('nurseZones');
-        let zones = savedZones ? JSON.parse(savedZones) : Array.from({length: 10}, (_, i) => ({
-            id: i + 1, x: 10 + (i * 8.8), y: 50, lastActive: false
-        }));
+        // Оновлення геометрії точок через слайдери
+        function updateLayout() {
+            const gap = parseFloat(document.getElementById('gapRange').value);
+            const size = document.getElementById('sizeRange').value;
+            
+            zones.forEach((zone, i) => {
+                zone.x = 10 + (i * gap); // Початковий відступ 10% + крок
+            });
+            drawMarkers(size);
+        }
 
-        function drawMarkers() {
+        function drawMarkers(size = 15) {
             overlay.innerHTML = '';
-            zones.forEach((zone, index) => {
-                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circle.setAttribute("cx", zone.x + "%");
-                circle.setAttribute("cy", zone.y + "%");
-                circle.setAttribute("r", "20"); 
-                circle.setAttribute("fill", zone.lastActive ? "rgba(255, 0, 0, 0.7)" : "rgba(0, 255, 0, 0.4)");
-                circle.setAttribute("stroke", "white");
-                circle.setAttribute("stroke-width", "2");
-                
-                circle.onpointerdown = (e) => { 
-                    selectedPoint = index; 
-                    circle.setPointerCapture(e.pointerId);
-                };
-                circle.onpointermove = (e) => {
-                    if (selectedPoint === index) {
-                        const rect = overlay.getBoundingClientRect();
-                        zones[index].x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-                        zones[index].y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-                        drawMarkers();
-                        localStorage.setItem('nurseZones', JSON.stringify(zones));
-                    }
-                };
-                circle.onpointerup = () => { selectedPoint = null; };
-                
-                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                text.setAttribute("x", zone.x + "%");
-                text.setAttribute("y", (zone.y + 1) + "%");
-                text.setAttribute("fill", "white");
-                text.setAttribute("font-size", "14");
-                text.setAttribute("font-weight", "bold");
-                text.setAttribute("text-anchor", "middle");
-                text.setAttribute("dominant-baseline", "middle");
-                text.textContent = zone.id;
-                text.style.pointerEvents = "none";
-
-                g.appendChild(circle);
-                g.appendChild(text);
-                overlay.appendChild(g);
+            zones.forEach(zone => {
+                const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                c.setAttribute("cx", zone.x + "%");
+                c.setAttribute("cy", zone.y + "%");
+                c.setAttribute("r", size);
+                c.setAttribute("fill", "rgba(0, 255, 0, 0.3)");
+                c.setAttribute("stroke", "white");
+                overlay.appendChild(c);
             });
         }
 
-        drawMarkers();
-
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: { ideal: 1280 } } 
-                });
-                video.srcObject = stream;
-            } catch (err) { console.error("Cam error"); }
+        function toggleEngine() {
+            isRunning = !isRunning;
+            const btn = document.getElementById('start-btn');
+            btn.innerText = isRunning ? "🛑 ЗУПИНИТИ" : "▶️ ЗАПУСТИТИ АНАЛІЗ";
+            btn.classList.toggle('btn-stop', isRunning);
+            display.innerText = isRunning ? "ГОТОВИЙ" : "ПАУЗА";
         }
 
-        function processFrame() {
-            if (!isPaused && video.readyState === video.HAVE_ENOUGH_DATA) {
-                // Використовуємо реальні розміри відеопотоку
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                let stateChanged = false;
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        function sendTelegram(id) {
+            if (!isRunning) return;
+            fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent('🚨 ВИКЛИК: Палата №' + id)}`);
+        }
+
+        async function init() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
+            updateLayout();
+            requestAnimationFrame(process);
+        }
+
+        function process() {
+            if (isRunning && video.readyState === video.HAVE_ENOUGH_DATA) {
+                procCanvas.width = video.videoWidth;
+                procCanvas.height = video.videoHeight;
+                procCtx.drawImage(video, 0, 0);
+
                 zones.forEach(zone => {
-                    // Розраховуємо координати відносно реального розміру відео
-                    const x = Math.floor(canvas.width * zone.x / 100);
-                    const y = Math.floor(canvas.height * zone.y / 100);
+                    const x = Math.floor(procCanvas.width * zone.x / 100);
+                    const y = Math.floor(procCanvas.height * zone.y / 100);
+                    const p = procCtx.getImageData(x, y, 1, 1).data;
                     
-                    // Захист від виходу за межі масиву
-                    if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
-                        const pixel = ctx.getImageData(x, y, 1, 1).data;
-                        const brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
-                        const isActive = brightness > 195;
-                        
-                        if (isActive && !zone.lastActive) { 
-                            registerCall(zone.id); 
-                            stateChanged = true;
-                        }
-                        if (isActive !== zone.lastActive) {
-                            zone.lastActive = isActive;
-                            stateChanged = true;
+                    const greenIntensity = p[1] - (p[0] + p[2]) / 2;
+                    const active = greenIntensity > document.getElementById('sensRange').value;
+
+                    if (active && !zone.lastActive) {
+                        if (callList[callList.length - 1] !== zone.id) {
+                            callList.push(zone.id);
+                            sendTelegram(zone.id);
+                            updateUI();
                         }
                     }
+                    zone.lastActive = active;
                 });
-                if (stateChanged) drawMarkers();
             }
-            requestAnimationFrame(processFrame);
-        }
-
-        function forceReload() {
-            window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
-        }
-
-        function registerCall(id) {
-            callRegistry[id] = (callRegistry[id] || 0) + 1;
-            updateUI();
+            requestAnimationFrame(process);
         }
 
         function updateUI() {
-            const keys = Object.keys(callRegistry).sort((a, b) => Number(a) - Number(b));
-            display.innerText = keys.length === 0 ? "ПОРОЖНЬО" : keys.map(id => `${id}(${callRegistry[id]})`).join(", ");
+            const text = [...new Set(callList)].slice(-3).reverse().join(", ");
+            display.innerText = text || "ГОТОВИЙ";
+            display.style.color = text ? "#f00" : "#0f0";
         }
 
-        function clearCalls() { callRegistry = {}; updateUI(); }
+        function clearCalls() { callList = []; updateUI(); }
+        window.onkeydown = (e) => { if(e.code === 'Space') clearCalls(); };
 
-        function togglePause() {
-            isPaused = !isPaused;
-            pauseBtn.innerText = isPaused ? "ВІДНОВИТИ" : "ПАУЗА АВТО";
-            pauseBtn.classList.toggle('active', isPaused);
-        }
-
-        startCamera();
-        video.addEventListener('play', () => requestAnimationFrame(processFrame));
+        init();
     </script>
 </body>
 </html>

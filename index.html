@@ -3,33 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Pro v14.1 Full</title>
+    <title>Vellez Smart Monitor v15.0</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
-        
-        /* Верхня панель зі списком палат */
-        #status-area { height: 15vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; }
-        #call-display { font-size: 10vw; color: #0f0; font-weight: bold; text-align: center; width: 100%; }
-
-        /* Відео-монітор */
+        #status-area { height: 15vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; padding: 0 10px; }
+        #call-display { font-size: 9vw; color: #0f0; font-weight: bold; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; }
         #cam-box { position: relative; flex-grow: 1; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-
-        /* Нижня панель керування */
         .ui-panel { background: #1a1a1a; padding: 10px; border-top: 1px solid #333; flex-shrink: 0; }
-        
-        /* Налаштування та Тестові кнопки */
         #settings-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
         .s-label { display: flex; justify-content: space-between; font-size: 14px; color: #0f0; font-weight: bold; }
         input[type=range] { width: 100%; height: 45px; margin: 0; cursor: pointer; } 
-
-        /* Сітка кнопок 1-10 */
-        .test-grid { display: grid; grid-template-columns: repeat(5, 2fr); gap: 6px; margin-bottom: 10px; }
+        .test-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
         .t-btn { background: #333; border: 1px solid #555; border-radius: 8px; padding: 15px 0; color: white; font-weight: bold; font-size: 18px; touch-action: manipulation; }
-        .t-btn:active { background: #d32f2f; transform: scale(0.95); }
-
-        /* Головні кнопки керування */
+        .t-btn:active { background: #007bff; transform: scale(0.95); }
         .btn-row { display: flex; gap: 10px; }
         button { padding: 18px; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; }
         .btn-start { background: #28a745; flex: 3; }
@@ -53,190 +41,162 @@
         <div id="settings-group">
             <div>
                 <div class="s-label"><span>РОЗМІР ТОЧОК</span><span id="v-size">20</span></div>
-                <input type="range" id="sizeRange" min="5" max="120" value="20" oninput="updateInterface()">
+                <input type="range" id="sizeRange" min="5" max="120" value="20" oninput="updateUI()">
             </div>
             <div>
-                <div class="s-label"><span>ВІДСТАНЬ (КРОК)</span><span id="v-gap">9.0</span></div>
-                <input type="range" id="gapRange" min="2" max="18" value="9.0" step="0.1" oninput="updateInterface()">
+                <div class="s-label"><span>ВІДСТАНЬ</span><span id="v-gap">9.0</span></div>
+                <input type="range" id="gapRange" min="2" max="18" value="9.0" step="0.1" oninput="updateUI()">
             </div>
             
             <div class="test-grid">
-                <button class="t-btn" onclick="manualRegister(1)">1</button>
-                <button class="t-btn" onclick="manualRegister(2)">2</button>
-                <button class="t-btn" onclick="manualRegister(3)">3</button>
-                <button class="t-btn" onclick="manualRegister(4)">4</button>
-                <button class="t-btn" onclick="manualRegister(5)">5</button>
-                <button class="t-btn" onclick="manualRegister(6)">6</button>
-                <button class="t-btn" onclick="manualRegister(7)">7</button>
-                <button class="t-btn" onclick="manualRegister(8)">8</button>
-                <button class="t-btn" onclick="manualRegister(9)">9</button>
-                <button class="t-btn" onclick="manualRegister(10)">10</button>
+                <button class="t-btn" onclick="registerCall(1)">1</button>
+                <button class="t-btn" onclick="registerCall(2)">2</button>
+                <button class="t-btn" onclick="registerCall(3)">3</button>
+                <button class="t-btn" onclick="registerCall(4)">4</button>
+                <button class="t-btn" onclick="registerCall(5)">5</button>
+                <button class="t-btn" onclick="registerCall(6)">6</button>
+                <button class="t-btn" onclick="registerCall(7)">7</button>
+                <button class="t-btn" onclick="registerCall(8)">8</button>
+                <button class="t-btn" onclick="registerCall(9)">9</button>
+                <button class="t-btn" onclick="registerCall(10)">10</button>
             </div>
         </div>
 
         <div class="btn-row">
-            <button class="btn-gear" onclick="toggleSettingsPanel()">⚙️</button>
-            <button id="start-btn" class="btn-start" onclick="toggleAnalysis()">▶ СТАРТ</button>
-            <button class="btn-clear" onclick="resetAll()">СКИДАННЯ</button>
+            <button class="btn-gear" onclick="toggleSettings()">⚙️</button>
+            <button id="start-btn" class="btn-start" onclick="toggleStart()">▶ СТАРТ</button>
+            <button class="btn-clear" onclick="resetCalls()">СКИДАННЯ</button>
         </div>
     </div>
 
     <script>
-        // Налаштування Telegram
         const TG_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
         const TG_ID = '-5292414189';
 
-        let isAnalysisActive = false;
-        let callRegistry = [];
-        let sensorZones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, isTriggered: false }));
+        let isRunning = false;
+        let callData = []; // Масив об'єктів {id, count}
+        let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, active: false }));
 
-        const videoElement = document.getElementById('video');
-        const displayElement = document.getElementById('call-display');
-        const overlaySvg = document.getElementById('overlay');
-        const processingCanvas = document.createElement('canvas');
-        const processingCtx = processingCanvas.getContext('2d', { willReadFrequently: true });
+        const vid = document.getElementById('video');
+        const disp = document.getElementById('call-display');
+        const ov = document.getElementById('overlay');
+        const canv = document.createElement('canvas');
+        const ctx = canv.getContext('2d', { willReadFrequently: true });
 
-        // Функція для ручного тесту кнопок
-        function manualRegister(id) {
-            // Додаємо в список (навіть якщо такий самий був останнім, для наочності тесту)
-            callRegistry.push(id);
-            
+        // Головна функція реєстрації (працює і для кнопок, і для камери)
+        function registerCall(id, fromCamera = false) {
+            // Якщо з камери, але аналіз вимкнено - ігноруємо
+            if (fromCamera && !isRunning) return;
+
             // Відправка в Telegram
-            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ТЕСТОВИЙ ВИКЛИК: Палата №' + id)}`)
-                .catch(err => console.error("TG Error:", err));
+            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ВИКЛИК: Палата №' + id)}`)
+                .catch(e => console.error("Telegram Error"));
+
+            // Логіка списку: шукаємо, чи є вже ця палата в активних 5
+            let index = callData.findIndex(item => item.id === id);
             
-            // Миттєве оновлення екрану
-            updateDisplayUI();
-            
-            // Вібрація для зворотного зв'язку (якщо підтримується)
+            if (index !== -1) {
+                // Якщо є - збільшуємо лічильник і переносимо в кінець черги
+                callData[index].count++;
+                let item = callData.splice(index, 1)[0];
+                callData.push(item);
+            } else {
+                // Якщо немає - додаємо нову в кінець
+                callData.push({ id: id, count: 1 });
+            }
+
+            // Тримаємо тільки останні 5 унікальних
+            if (callData.length > 5) {
+                callData.shift();
+            }
+
+            renderText();
             if (navigator.vibrate) navigator.vibrate(50);
         }
 
-        // Оновлення положення точок через слайдери
-        function updateInterface() {
-            const currentGap = parseFloat(document.getElementById('gapRange').value);
-            const currentSize = document.getElementById('sizeRange').value;
+        function renderText() {
+            if (callData.length === 0) {
+                disp.innerText = isRunning ? "ГОТОВИЙ" : "ПАУЗА";
+                disp.style.color = "#0f0";
+                return;
+            }
+
+            // Формуємо рядок типу 1, 2(2), 5
+            const output = callData.map(item => {
+                return item.count > 1 ? `${item.id}(${item.count})` : `${item.id}`;
+            }).join(", ");
+
+            disp.innerText = output;
+            disp.style.color = "#f44";
+        }
+
+        function updateUI() {
+            const gap = parseFloat(document.getElementById('gapRange').value);
+            const size = document.getElementById('sizeRange').value;
+            document.getElementById('v-gap').innerText = gap;
+            document.getElementById('v-size').innerText = size;
             
-            document.getElementById('v-gap').innerText = currentGap;
-            document.getElementById('v-size').innerText = currentSize;
+            zones.forEach((z, i) => { z.x = 10 + (i * gap); });
             
-            sensorZones.forEach((zone, index) => {
-                zone.x = 10 + (index * currentGap);
+            ov.innerHTML = '';
+            zones.forEach(z => {
+                const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                c.setAttribute("cx", z.x + "%"); c.setAttribute("cy", z.y + "%");
+                c.setAttribute("r", size); c.setAttribute("fill", "rgba(0,255,0,0.4)");
+                c.setAttribute("stroke", "white");
+                ov.appendChild(c);
             });
-            
-            renderMarkers(currentSize);
         }
 
-        // Малювання кружечків на відео
-        function renderMarkers(radius) {
-            overlaySvg.innerHTML = '';
-            sensorZones.forEach(zone => {
-                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circle.setAttribute("cx", zone.x + "%");
-                circle.setAttribute("cy", zone.y + "%");
-                circle.setAttribute("r", radius);
-                circle.setAttribute("fill", "rgba(0, 255, 0, 0.4)");
-                circle.setAttribute("stroke", "white");
-                circle.setAttribute("stroke-width", "2");
-                overlaySvg.appendChild(circle);
-            });
+        function toggleSettings() {
+            const gs = document.getElementById('settings-group');
+            gs.style.display = (gs.style.display === 'none') ? 'flex' : 'none';
         }
 
-        // Показ/приховування налаштувань
-        function toggleSettingsPanel() {
-            const panel = document.getElementById('settings-group');
-            panel.style.display = (panel.style.display === 'none') ? 'flex' : 'none';
-        }
-
-        // Запуск/Зупинка аналізу камери
-        function toggleAnalysis() {
-            isAnalysisActive = !isAnalysisActive;
+        function toggleStart() {
+            isRunning = !isRunning;
             const btn = document.getElementById('start-btn');
-            
-            if (isAnalysisActive) {
-                btn.innerText = "🛑 ЗУПИНИТИ";
-                btn.classList.add('btn-stop');
-                displayElement.innerText = "АНАЛІЗ...";
-            } else {
-                btn.innerText = "▶ СТАРТ";
-                btn.classList.remove('btn-stop');
-                displayElement.innerText = "ПАУЗА";
-            }
+            btn.innerText = isRunning ? "🛑 СТОП" : "▶ СТАРТ";
+            btn.classList.toggle('btn-stop', isRunning);
+            renderText();
         }
 
-        // Оновлення великих цифр на табло
-        function updateDisplayUI() {
-            // Беремо унікальні значення останніх викликів для відображення
-            const recent = [...new Set(callRegistry)].slice(-4).reverse();
-            if (recent.length > 0) {
-                displayElement.innerText = recent.join(", ");
-                displayElement.style.color = "#ff4444"; // Червоний при виклику
-            } else {
-                displayElement.innerText = isAnalysisActive ? "ГОТОВИЙ" : "ПАУЗА";
-                displayElement.style.color = "#00ff00"; // Зелений коли пусто
-            }
-        }
-
-        // Основний цикл обробки відео
-        async function startSystem() {
+        async function init() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: { ideal: 1280 } } 
-                });
-                videoElement.srcObject = stream;
-                updateInterface();
-                requestAnimationFrame(analyzeFrame);
-            } catch (e) {
-                displayElement.innerText = "ПОМИЛКА КАМЕРИ";
-            }
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
+                vid.srcObject = s;
+                updateUI();
+                loop();
+            } catch (e) { disp.innerText = "КАМЕРА ПІД КЛЮЧЕМ"; }
         }
 
-        function analyzeFrame() {
-            if (isAnalysisActive && videoElement.readyState === 4) {
-                processingCanvas.width = videoElement.videoWidth;
-                processingCanvas.height = videoElement.videoHeight;
-                processingCtx.drawImage(videoElement, 0, 0);
+        function loop() {
+            if (isRunning && vid.readyState === 4) {
+                canv.width = vid.videoWidth; canv.height = vid.videoHeight;
+                ctx.drawImage(vid, 0, 0);
+                zones.forEach(z => {
+                    const x = Math.floor(canv.width * z.x / 100);
+                    const y = Math.floor(canv.height * z.y / 100);
+                    const p = ctx.getImageData(x, y, 1, 1).data;
+                    const green = p[1] - (p[0] + p[2]) / 2;
 
-                let detectedNew = false;
-
-                sensorZones.forEach(zone => {
-                    const imgX = Math.floor(processingCanvas.width * zone.x / 100);
-                    const imgY = Math.floor(processingCanvas.height * zone.y / 100);
-                    
-                    // Перевірка межі кадру
-                    if (imgX > 0 && imgX < processingCanvas.width) {
-                        const pixel = processingCtx.getImageData(imgX, imgY, 1, 1).data;
-                        // Формула для виділення зеленого діода
-                        const greenVal = pixel[1] - (pixel[0] + pixel[2]) / 2;
-
-                        if (greenVal > 75) { // Поріг чутливості
-                            if (!zone.isTriggered) {
-                                // Реєструємо виклик
-                                if (callRegistry[callRegistry.length - 1] !== zone.id) {
-                                    callRegistry.push(zone.id);
-                                    manualRegister(zone.id); // Використовуємо ту ж логіку відправки
-                                    detectedNew = true;
-                                }
-                                zone.isTriggered = true;
-                            }
-                        } else {
-                            zone.isTriggered = false;
+                    if (green > 80) {
+                        if (!z.active) {
+                            registerCall(z.id, true);
+                            z.active = true;
                         }
-                    }
+                    } else { z.active = false; }
                 });
-                if (detectedNew) updateDisplayUI();
             }
-            requestAnimationFrame(analyzeFrame);
+            requestAnimationFrame(loop);
         }
 
-        function resetAll() {
-            callRegistry = [];
-            displayElement.innerText = "ГОТОВИЙ";
-            displayElement.style.color = "#00ff00";
+        function resetCalls() {
+            callData = [];
+            renderText();
         }
 
-        // Запуск при завантаженні
-        startSystem();
+        init();
     </script>
 </body>
 </html>

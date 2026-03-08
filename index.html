@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Smart v23.7 Focus Pro</title>
+    <title>Vellez Smart v23.8 Full Persist</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; touch-action: none; }
         #status-area { height: 12vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; }
@@ -11,15 +11,18 @@
         #cam-box { position: relative; flex-grow: 1; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: contain; pointer-events: none; transition: filter 0.2s; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
         #settings-overlay { display: none; position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(10,10,10,0.98); border-top: 2px solid #007bff; z-index: 100; flex-direction: column; touch-action: auto; }
         .tabs { display: flex; background: #222; }
         .tab-btn { flex: 1; padding: 15px; border: none; color: #777; background: none; font-weight: bold; font-size: 12px; text-transform: uppercase; }
         .tab-btn.active { background: #007bff; color: white; }
         .tab-content { padding: 15px; max-height: 60vh; overflow-y: auto; display: none; flex-direction: column; gap: 8px; }
         .tab-content.active { display: flex; }
+        
         .s-label { display: flex; justify-content: space-between; font-size: 11px; color: #0f0; font-weight: bold; margin-top: 4px; }
         input[type=range] { width: 100%; height: 35px; cursor: pointer; touch-action: auto; }
         .check-row { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 13px; background: #222; padding: 12px; border-radius: 10px; border: 1px solid #333; margin: 2px 0; }
+
         .btn-row { display: flex; gap: 8px; padding: 10px; background: #111; flex-shrink: 0; }
         button { border: none; border-radius: 12px; font-weight: bold; color: white; cursor: pointer; }
         .btn-main { background: #28a745; flex: 2.5; padding: 18px; font-size: 18px; }
@@ -37,7 +40,7 @@
     <div id="cam-box">
         <video id="video" autoplay playsinline muted></video>
         <svg id="overlay"></svg>
-        <div id="drag-hint">ПЕРЕСУВАЙТЕ ТОЧКИ</div>
+        <div id="drag-hint">ПЕРЕСУВАЙТЕ ТОЧКИ ПАЛЬЦЕМ</div>
 
         <div id="settings-overlay">
             <div class="tabs">
@@ -47,17 +50,17 @@
             </div>
             
             <div id="tab-points" class="tab-content active">
-                <div class="s-label"><span>РОЗМІР: <span id="v-size">7</span></span></div>
-                <input type="range" id="sizeRange" min="2" max="60" value="7" oninput="saveUpd()">
-                <div class="s-label"><span>ВІДСТАНЬ: <span id="v-gap">5.0</span></span></div>
-                <input type="range" id="gapRange" min="0.5" max="15" value="5.0" step="0.1" oninput="saveUpd()">
+                <div class="s-label"><span>РОЗМІР КРУЖЕЧКІВ: <span id="v-size">7</span></span></div>
+                <input type="range" id="sizeRange" min="2" max="60" value="7" oninput="saveUpd(false)">
+                <div class="s-label"><span>ВІДСТАНЬ МІЖ НИМИ: <span id="v-gap">5.0</span></span></div>
+                <input type="range" id="gapRange" min="0.5" max="15" value="5.0" step="0.1" oninput="saveUpd(false)">
                 <button style="background:#007bff; padding:15px; border-radius:10px; margin-top:10px;" onclick="tglS()">ГОТОВО ✓</button>
             </div>
 
             <div id="tab-test" class="tab-content">
-                <label class="check-row"><input type="checkbox" id="useAlarm" onchange="saveUpd()"> 🚨 ВРАХОВУВАТИ ТРИВОГУ</label>
+                <label class="check-row"><input type="checkbox" id="useAlarm" onchange="saveUpd(true)"> 🚨 ВРАХОВУВАТИ ТРИВОГУ</label>
                 <div class="s-label"><span>ПОРІГ ДЕТЕКЦІЇ: <span id="v-sens">40</span></span></div>
-                <input type="range" id="sensRange" min="5" max="100" value="40" oninput="saveUpd()">
+                <input type="range" id="sensRange" min="5" max="100" value="40" oninput="saveUpd(false)">
                 <div id="log-box">Лог активності...</div>
                 <div class="test-grid">
                     <script>for(let i=1; i<=10; i++) document.write(`<button class="test-btn" onclick="reg(${i}, false)">${i}</button>`);</script>
@@ -65,19 +68,19 @@
             </div>
 
             <div id="tab-cam" class="tab-content">
-                <div class="s-label"><span>FPS: <span id="v-fps">1</span></span></div>
-                <input type="range" id="fpsRange" min="1" max="30" value="1" oninput="saveUpd()">
+                <div class="s-label"><span>FPS (ЗЧИТУВАННЯ/СЕК): <span id="v-fps">1</span></span></div>
+                <input type="range" id="fpsRange" min="1" max="30" value="1" oninput="saveUpd(false)">
                 
-                <label class="check-row"><input type="checkbox" id="autoFocus" checked onchange="saveUpd()"> АВТОФОКУС</label>
+                <label class="check-row"><input type="checkbox" id="autoFocus" checked onchange="saveUpd(true)"> АВТОФОКУС</label>
                 <div id="manual-focus-ui" style="display:none;">
                     <div class="s-label"><span>ФОКУСНА ВІДСТАНЬ: <span id="v-foc">100</span></span></div>
-                    <input type="range" id="focRange" min="0" max="100" value="100" oninput="saveUpd()">
+                    <input type="range" id="focRange" min="0" max="100" value="100" oninput="saveUpd(false)">
                 </div>
 
-                <div class="s-label"><span>ЯСКРАВІСТЬ: <span id="v-exp">1.0</span></span></div>
-                <input type="range" id="expRange" min="0.1" max="2.0" value="1.0" step="0.05" oninput="saveUpd()">
+                <div class="s-label"><span>ЯСКРАВІСТЬ (EXPOSURE): <span id="v-exp">1.0</span></span></div>
+                <input type="range" id="expRange" min="0.1" max="2.0" value="1.0" step="0.05" oninput="saveUpd(false)">
                 <div class="s-label"><span>КОНТРАСТ: <span id="v-con">1.0</span></span></div>
-                <input type="range" id="conRange" min="0.5" max="2.5" value="1.0" step="0.1" oninput="saveUpd()">
+                <input type="range" id="conRange" min="0.5" max="2.5" value="1.0" step="0.1" oninput="saveUpd(false)">
             </div>
         </div>
     </div>
@@ -92,6 +95,7 @@
         const TG_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
         const TG_ID = '-5292414189';
         let act = false, calls = [], isSettings = false, videoTrack = null;
+        
         let groupPos = { x: 10, y: 50, gap: 5.0, size: 7 };
         let alarmPos = { x: 5, y: 50, baseline: 0, lastVal: 0, lastActiveTime: 0 };
         let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, baseline: 0, lastVal: 0, detectStart: 0, lastSeenTime: 0 }));
@@ -100,6 +104,7 @@
         const vid = document.getElementById('video'), disp = document.getElementById('call-display'), ov = document.getElementById('overlay'), camBox = document.getElementById('cam-box');
         const canv = document.createElement('canvas'), ctx = canv.getContext('2d', { willReadFrequently: true });
 
+        // Touch Handlers
         camBox.addEventListener('touchstart', (e) => {
             if (!isSettings || (e.target !== camBox && e.target !== ov)) return;
             const touch = e.touches[0], rect = camBox.getBoundingClientRect();
@@ -115,6 +120,11 @@
             const nx = ((touch.clientX - rect.left) / rect.width) * 100 - touchOffset.x, ny = ((touch.clientY - rect.top) / rect.height) * 100 - touchOffset.y;
             if (touchTarget === 'alarm') { alarmPos.x = nx; alarmPos.y = ny; } else { groupPos.x = nx; groupPos.y = ny; }
             saveUpd(false); e.preventDefault();
+        });
+
+        camBox.addEventListener('touchend', () => { 
+            if (isSettings) saveUpd(true); // ТУТ ВАЖЛИВО: Зберігаємо в LocalStorage при відпусканні пальця
+            touchTarget = null; 
         });
 
         function loop() {
@@ -162,9 +172,34 @@
             disp.innerText = txt; disp.style.color = calls.length === 0 ? "#0f0" : "#f44";
         }
 
-        function tglA() { act = !act; document.getElementById('start-btn').innerText = act ? "🛑 СТОП" : "▶ СТАРТ"; if (act) setTimeout(() => { alarmPos.baseline = alarmPos.lastVal; zones.forEach(z => z.baseline = z.lastVal); }, 1200); render(); }
-        function tglS() { isSettings = !isSettings; document.getElementById('settings-overlay').style.display = isSettings ? 'flex' : 'none'; if(isSettings) openTab({currentTarget: document.querySelector('.tab-btn')}, 'tab-points'); }
-        function openTab(evt, tabName) { document.querySelectorAll(".tab-content").forEach(c => c.style.display = "none"); document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active")); document.getElementById(tabName).style.display = "flex"; evt.currentTarget.classList.add("active"); document.getElementById('status-area').style.display = (tabName === 'tab-points') ? 'none' : 'flex'; document.getElementById('drag-hint').style.display = (tabName === 'tab-points') ? 'block' : 'none'; }
+        function tglA() { 
+            act = !act; 
+            document.getElementById('start-btn').innerText = act ? "🛑 СТОП" : "▶ СТАРТ"; 
+            document.getElementById('start-btn').style.background = act ? "#dc3545" : "#28a745"; 
+            if (act) {
+                setTimeout(() => { 
+                    alarmPos.baseline = alarmPos.lastVal; 
+                    zones.forEach(z => z.baseline = z.lastVal); 
+                }, 1200);
+            } 
+            render(); 
+        }
+
+        function tglS() { 
+            isSettings = !isSettings; 
+            document.getElementById('settings-overlay').style.display = isSettings ? 'flex' : 'none'; 
+            if(isSettings) openTab({currentTarget: document.querySelector('.tab-btn')}, 'tab-points'); 
+            else saveUpd(true); // Зберігаємо при виході
+        }
+
+        function openTab(evt, tabName) { 
+            document.querySelectorAll(".tab-content").forEach(c => c.style.display = "none"); 
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active")); 
+            document.getElementById(tabName).style.display = "flex"; 
+            evt.currentTarget.classList.add("active"); 
+            document.getElementById('status-area').style.display = (tabName === 'tab-points') ? 'none' : 'flex'; 
+            document.getElementById('drag-hint').style.display = (tabName === 'tab-points') ? 'block' : 'none'; 
+        }
         
         function saveUpd(ws = true) { 
             const exp = document.getElementById('expRange').value, con = document.getElementById('conRange').value;
@@ -178,27 +213,60 @@
             document.getElementById('v-foc').innerText = foc;
             document.getElementById('manual-focus-ui').style.display = auto ? 'none' : 'block';
 
-            if (videoTrack) {
+            if (videoTrack && videoTrack.getCapabilities().focusMode) {
                 const constraints = { advanced: [{ focusMode: auto ? "continuous" : "manual" }] };
                 if (!auto) constraints.advanced[0].focusDistance = foc;
-                videoTrack.applyConstraints(constraints).catch(e => console.log("Focus error"));
+                videoTrack.applyConstraints(constraints).catch(e => {});
             }
 
-            if(ws) localStorage.setItem('vP237', JSON.stringify({ax: alarmPos.x, ay: alarmPos.y, gx: groupPos.x, gy: groupPos.y, s: document.getElementById('sizeRange').value, g: document.getElementById('gapRange').value, sn: document.getElementById('sensRange').value, exp, con, fps: document.getElementById('fpsRange').value, ua: document.getElementById('useAlarm').checked, af: auto, fdist: foc})); 
+            if(ws) {
+                localStorage.setItem('vP238', JSON.stringify({
+                    ax: alarmPos.x, ay: alarmPos.y, gx: groupPos.x, gy: groupPos.y, 
+                    s: document.getElementById('sizeRange').value, 
+                    g: document.getElementById('gapRange').value, 
+                    sn: document.getElementById('sensRange').value, 
+                    exp, con, 
+                    fps: document.getElementById('fpsRange').value, 
+                    ua: document.getElementById('useAlarm').checked, 
+                    af: auto, fdist: foc
+                }));
+            } 
             upd(); 
         }
 
-        function upd() { ov.innerHTML = ''; const ac = document.createElementNS("http://www.w3.org/2000/svg", "circle"); ac.setAttribute("cx", alarmPos.x + "%"); ac.setAttribute("cy", alarmPos.y + "%"); ac.setAttribute("r", document.getElementById('sizeRange').value); ac.setAttribute("fill", "rgba(255,0,0,0.4)"); ac.setAttribute("stroke", "red"); ov.appendChild(ac); zones.forEach((z, i) => { z.curX = groupPos.x + (i * parseFloat(document.getElementById('gapRange').value)); z.curY = groupPos.y; const c = document.createElementNS("http://www.w3.org/2000/svg", "circle"); c.setAttribute("cx", z.curX + "%"); c.setAttribute("cy", z.curY + "%"); c.setAttribute("r", document.getElementById('sizeRange').value); c.setAttribute("fill", "rgba(0,255,0,0.2)"); c.setAttribute("stroke", "white"); ov.appendChild(c); }); }
+        function upd() { 
+            ov.innerHTML = ''; 
+            const s = document.getElementById('sizeRange').value;
+            const gap = parseFloat(document.getElementById('gapRange').value);
+            
+            const ac = document.createElementNS("http://www.w3.org/2000/svg", "circle"); 
+            ac.setAttribute("cx", alarmPos.x + "%"); ac.setAttribute("cy", alarmPos.y + "%"); 
+            ac.setAttribute("r", s); ac.setAttribute("fill", "rgba(255,0,0,0.4)"); 
+            ac.setAttribute("stroke", "red"); ov.appendChild(ac); 
+            
+            zones.forEach((z, i) => { 
+                z.curX = groupPos.x + (i * gap); z.curY = groupPos.y; 
+                const c = document.createElementNS("http://www.w3.org/2000/svg", "circle"); 
+                c.setAttribute("cx", z.curX + "%"); c.setAttribute("cy", z.curY + "%"); 
+                c.setAttribute("r", s); c.setAttribute("fill", "rgba(0,255,0,0.2)"); 
+                c.setAttribute("stroke", "white"); ov.appendChild(c); 
+            }); 
+        }
         
         async function init() { 
             try { 
-                const s = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, facingMode: "environment" } }); vid.srcObject = s;
+                const s = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, facingMode: "environment" } }); 
+                vid.srcObject = s;
                 videoTrack = s.getVideoTracks()[0];
-                const p = JSON.parse(localStorage.getItem('vP237') || '{}'); 
-                if(p.ax !== undefined) alarmPos.x = p.ax; if(p.ay !== undefined) alarmPos.y = p.ay; if(p.gx !== undefined) groupPos.x = p.gx; if(p.gy !== undefined) groupPos.y = p.gy; 
-                if(p.exp) document.getElementById('expRange').value = p.exp; if(p.con) document.getElementById('conRange').value = p.con; 
-                if(p.sn) document.getElementById('sensRange').value = p.sn; if(p.s) document.getElementById('sizeRange').value = p.s; 
-                if(p.g) document.getElementById('gapRange').value = p.g; if(p.fps) document.getElementById('fpsRange').value = p.fps;
+                const p = JSON.parse(localStorage.getItem('vP238') || '{}'); 
+                if(p.ax !== undefined) alarmPos.x = p.ax; if(p.ay !== undefined) alarmPos.y = p.ay; 
+                if(p.gx !== undefined) groupPos.x = p.gx; if(p.gy !== undefined) groupPos.y = p.gy; 
+                if(p.exp) document.getElementById('expRange').value = p.exp; 
+                if(p.con) document.getElementById('conRange').value = p.con; 
+                if(p.sn) document.getElementById('sensRange').value = p.sn; 
+                if(p.s) document.getElementById('sizeRange').value = p.s; 
+                if(p.g) document.getElementById('gapRange').value = p.g; 
+                if(p.fps) document.getElementById('fpsRange').value = p.fps;
                 if(p.ua !== undefined) document.getElementById('useAlarm').checked = p.ua;
                 if(p.af !== undefined) document.getElementById('autoFocus').checked = p.af;
                 if(p.fdist) document.getElementById('focRange').value = p.fdist;

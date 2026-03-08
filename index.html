@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Smart v22.0 TouchMove</title>
+    <title>Vellez Smart v22.1 Fixed Touch</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; touch-action: none; }
         #status-area { height: 12vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; }
@@ -11,33 +11,33 @@
         #cam-box { position: relative; flex-grow: 1; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        #settings-overlay { display: none; position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(20,20,20,0.95); border-top: 2px solid #007bff; z-index: 100; flex-direction: column; }
+        
+        #settings-overlay { display: none; position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(20,20,20,0.95); border-top: 2px solid #007bff; z-index: 100; flex-direction: column; touch-action: auto; }
         .tabs { display: flex; background: #333; }
         .tab-btn { flex: 1; padding: 12px; border: none; color: #ccc; background: none; font-weight: bold; font-size: 14px; }
         .tab-btn.active { background: #007bff; color: white; }
         .tab-content { padding: 15px; max-height: 50vh; overflow-y: auto; display: none; }
         .tab-content.active { display: flex; flex-direction: column; gap: 10px; }
+        
         .s-label { display: flex; justify-content: space-between; font-size: 13px; color: #0f0; font-weight: bold; }
-        input[type=range] { width: 100%; height: 40px; cursor: pointer; }
-        .log-area { background: #000; color: #8a8; font-family: monospace; font-size: 10px; padding: 5px; height: 60px; overflow-y: scroll; border: 1px solid #333; margin-bottom: 5px; }
+        input[type=range] { width: 100%; height: 40px; cursor: pointer; touch-action: auto; }
         .btn-row { display: flex; gap: 8px; padding: 10px; background: #1a1a1a; flex-shrink: 0; }
-        button { border: none; border-radius: 12px; font-weight: bold; color: white; cursor: pointer; }
+        button { border: none; border-radius: 12px; font-weight: bold; color: white; cursor: pointer; touch-action: auto; }
         .btn-main { background: #28a745; flex: 2; padding: 15px; font-size: 18px; }
-        .btn-stop { background: #dc3545 !important; }
         .btn-gear { background: #007bff; flex: 0.8; font-size: 20px; }
         .btn-pip { background: #6f42c1; flex: 1; font-size: 14px; }
         .btn-done { background: #007bff; padding: 15px; margin: 10px; font-size: 16px; }
-        #drag-hint { position: absolute; top: 10px; width: 100%; text-align: center; color: #007bff; font-weight: bold; text-shadow: 1px 1px 2px #000; pointer-events: none; display: none; }
+        #drag-hint { position: absolute; top: 10px; width: 100%; text-align: center; color: #007bff; font-weight: bold; pointer-events: none; display: none; z-index: 50; }
     </style>
 </head>
 <body>
 
     <div id="status-area"><div id="call-display">ГОТОВИЙ</div></div>
 
-    <div id="cam-box" id="touchZone">
+    <div id="cam-box">
         <video id="video" autoplay playsinline muted></video>
         <svg id="overlay"></svg>
-        <div id="drag-hint">ПЕРЕТЯГУЙТЕ ПАЛЬЦЕМ ГРУПУ ТОЧОК</div>
+        <div id="drag-hint">ТЯГНІТЬ ТУТ ДЛЯ ПЕРЕМІЩЕННЯ</div>
 
         <div id="settings-overlay">
             <div class="tabs">
@@ -45,26 +45,22 @@
                 <button class="tab-btn" onclick="openTab(event, 'tab-sys')">СИСТЕМА</button>
             </div>
             <div id="tab-points" class="tab-content active">
-                <div class="s-label"><span>РОЗМІР КРУЖЕЧКІВ: <span id="v-size">20</span></span></div>
+                <div class="s-label"><span>РОЗМІР: <span id="v-size">20</span></span></div>
                 <input type="range" id="sizeRange" min="5" max="80" value="20" oninput="saveUpd()">
-                <div class="s-label"><span>ВІДСТАНЬ МІЖ НИМИ: <span id="v-gap">9.0</span></span></div>
+                <div class="s-label"><span>ВІДСТАНЬ: <span id="v-gap">9.0</span></span></div>
                 <input type="range" id="gapRange" min="1" max="15" value="9.0" step="0.1" oninput="saveUpd()">
                 <button class="btn-done" onclick="tglS()">ГОТОВО ✓</button>
             </div>
             <div id="tab-sys" class="tab-content">
-                <div class="s-label"><span>FPS: <span id="v-fps">1</span></span> | <span>ПОРІГ: <span id="v-sens">40</span></span></div>
+                <div class="s-label"><span>FPS: <span id="v-fps">1</span> | ПОРІГ: <span id="v-sens">40</span></span></div>
                 <input type="range" id="fpsRange" min="1" max="30" value="1" oninput="saveUpd()">
                 <input type="range" id="sensRange" min="10" max="100" value="40" oninput="saveUpd()">
-                <div id="log-box" class="log-area">...</div>
                 <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:4px;">
                     <script>for(let i=1; i<=10; i++) document.write(`<button style="background:#444; padding:8px 0; border-radius:6px; color:white;" onclick="reg(${i}, false)">${i}</button>`);</script>
                 </div>
             </div>
         </div>
     </div>
-
-    <canvas id="pipCanvas" width="750" height="200" style="display:none;"></canvas>
-    <video id="pipVideo" autoplay muted style="display:none;"></video>
 
     <div class="btn-row">
         <button class="btn-gear" onclick="tglS()">⚙️</button>
@@ -73,6 +69,9 @@
         <button style="background:#444; flex:1;" onclick="res()">СКИДАННЯ</button>
     </div>
 
+    <canvas id="pipCanvas" width="750" height="200" style="display:none;"></canvas>
+    <video id="pipVideo" autoplay muted style="display:none;"></video>
+
     <script>
         const TG_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
         const TG_ID = '-5292414189';
@@ -80,14 +79,18 @@
         let groupPos = { x: 10, y: 50, gap: 9.0, size: 20 };
         let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, baseline: 0, lastVal: 0, detectStart: 0, lastSeenTime: 0 }));
 
-        const vid = document.getElementById('video'), disp = document.getElementById('call-display'), lb = document.getElementById('log-box');
+        const vid = document.getElementById('video'), disp = document.getElementById('call-display');
         const ov = document.getElementById('overlay'), pCanv = document.getElementById('pipCanvas'), pCtx = pCanv.getContext('2d'), pVid = document.getElementById('pipVideo');
         const canv = document.createElement('canvas'), ctx = canv.getContext('2d', { willReadFrequently: true });
         const camBox = document.getElementById('cam-box'), hint = document.getElementById('drag-hint');
 
-        // Логіка Drag-n-Drop для групи
-        camBox.addEventListener('touchstart', handleTouch);
-        camBox.addEventListener('touchmove', handleTouch);
+        // Події дотиків тільки для зони відео
+        camBox.addEventListener('touchstart', (e) => {
+            if (e.target === camBox || e.target === ov || e.target === hint) handleTouch(e);
+        });
+        camBox.addEventListener('touchmove', (e) => {
+            if (e.target === camBox || e.target === ov || e.target === hint) handleTouch(e);
+        });
 
         function handleTouch(e) {
             if (!isSettings || document.getElementById('tab-points').style.display === 'none') return;
@@ -95,12 +98,6 @@
             const rect = camBox.getBoundingClientRect();
             groupPos.x = ((touch.clientX - rect.left) / rect.width) * 100;
             groupPos.y = ((touch.clientY - rect.top) / rect.height) * 100;
-            
-            // Обмеження, щоб не вилазило за краї
-            if (groupPos.x < 2) groupPos.x = 2;
-            if (groupPos.y < 5) groupPos.y = 5;
-            if (groupPos.y > 95) groupPos.y = 95;
-            
             saveUpd(false); 
             e.preventDefault();
         }
@@ -124,20 +121,12 @@
         }
 
         function upd() {
-            let gap = parseFloat(document.getElementById('gapRange').value);
-            groupPos.gap = gap;
+            groupPos.gap = parseFloat(document.getElementById('gapRange').value);
             groupPos.size = document.getElementById('sizeRange').value;
-            
-            // Захист правої межі
-            if (groupPos.x + (9 * gap) > 98) {
-                groupPos.x = 98 - (9 * gap);
-            }
-
             document.getElementById('v-size').innerText = groupPos.size;
-            document.getElementById('v-gap').innerText = gap.toFixed(1);
+            document.getElementById('v-gap').innerText = groupPos.gap.toFixed(1);
             document.getElementById('v-fps').innerText = document.getElementById('fpsRange').value;
             document.getElementById('v-sens').innerText = document.getElementById('sensRange').value;
-            
             ov.innerHTML = '';
             zones.forEach((z, i) => {
                 z.curX = groupPos.x + (i * groupPos.gap);
@@ -168,14 +157,12 @@
             let txt = calls.length === 0 ? (act ? "ГОТОВИЙ" : "ПАУЗА") : calls.map(x => `${x.id}(${Math.floor((now - x.time) / 60000)})`).join(", ");
             disp.innerText = txt; disp.style.color = calls.length === 0 ? "#0f0" : "#f44";
             pCtx.fillStyle = "black"; pCtx.fillRect(0, 0, pCanv.width, pCanv.height);
-            pCtx.fillStyle = calls.length === 0 ? "#00ff00" : "#ff4444";
-            pCtx.font = "bold 55px sans-serif"; pCtx.textAlign = "center";
+            pCtx.fillStyle = "#ff4444"; pCtx.font = "bold 55px sans-serif"; pCtx.textAlign = "center";
             pCtx.fillText(txt, pCanv.width/2, pCanv.height/2 + 20);
         }
 
         function tglA() { 
             act = !act; document.getElementById('start-btn').innerText = act ? "🛑 СТОП" : "▶ СТАРТ";
-            document.getElementById('start-btn').classList.toggle('btn-stop', act);
             if (act) { setTimeout(() => { zones.forEach(z => z.baseline = z.lastVal); }, 1200); } 
             render(); 
         }
@@ -202,7 +189,7 @@
         async function init() {
             try {
                 vid.srcObject = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, facingMode: "environment" } });
-                const p = JSON.parse(localStorage.getItem('vP22') || '{}');
+                const p = JSON.parse(localStorage.getItem('vP221') || '{}');
                 if(p.x) groupPos.x = p.x; if(p.y) groupPos.y = p.y;
                 if(p.s) document.getElementById('sizeRange').value = p.s;
                 if(p.g) document.getElementById('gapRange').value = p.g;
@@ -213,19 +200,12 @@
         }
 
         function saveUpd(writeStorage = true) { 
-            if(writeStorage) {
-                localStorage.setItem('vP22', JSON.stringify({
-                    x: groupPos.x, y: groupPos.y, 
-                    s: document.getElementById('sizeRange').value, 
-                    g: document.getElementById('gapRange').value, 
-                    f: document.getElementById('fpsRange').value, 
-                    sn: document.getElementById('sensRange').value
-                })); 
-            }
+            if(writeStorage) localStorage.setItem('vP221', JSON.stringify({x: groupPos.x, y: groupPos.y, s: document.getElementById('sizeRange').value, g: document.getElementById('gapRange').value, f: document.getElementById('fpsRange').value, sn: document.getElementById('sensRange').value})); 
             upd(); 
         }
         function res() { calls = []; render(); zones.forEach(z => z.lastSeenTime = 0); }
         async function togglePiP() { const stream = pCanv.captureStream(10); pVid.srcObject = stream; await pVid.play(); await pVid.requestPictureInPicture(); }
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') res(); });
         init();
     </script>
 </body>

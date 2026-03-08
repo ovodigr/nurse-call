@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Smart v19.9 Telegram List</title>
+    <title>Vellez Smart v20.0 BrightScan</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
         #status-area { height: 12vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; }
@@ -38,18 +38,21 @@
 
     <div class="ui-panel">
         <div id="settings-scroll">
-            <div class="s-label"><span>FPS: <span id="v-fps">1</span></span></div>
+            <div class="s-label"><span>FPS (ЧАСТОТА): <span id="v-fps">1</span></span></div>
             <input type="range" id="fpsRange" min="1" max="30" value="1" oninput="saveUpd()">
+            
+            <div class="s-label"><span>ПОРІГ ЯСКРАВОСТІ (DELTA): <span id="v-sens">40</span></span></div>
+            <input type="range" id="sensRange" min="10" max="100" value="40" oninput="saveUpd()">
+
             <div class="s-label"><span>РОЗМІР ТОЧОК: <span id="v-size">20</span></span></div>
             <input type="range" id="sizeRange" min="5" max="100" value="20" oninput="saveUpd()">
+            
             <div class="s-label"><span>ВІДСТАНЬ: <span id="v-gap">9.0</span></span></div>
             <input type="range" id="gapRange" min="2" max="15" value="9.0" step="0.1" oninput="saveUpd()">
-            <div class="s-label"><span>ЯСКРАВІСТЬ: <span id="v-exp">1.0</span></span></div>
-            <input type="range" id="expRange" min="0.1" max="2.0" value="1.0" step="0.05" oninput="saveUpd()">
-
-            <div id="log-box" class="log-area">Лог активності...</div>
+            
+            <div id="log-box" class="log-area">Система готова...</div>
             <div style="display:flex; gap:5px; margin-top:5px;">
-                <button style="flex:1; background:#555; padding:8px; border-radius:5px; font-size:11px;" onclick="clearLog()">ОЧИСТИТИ</button>
+                <button style="flex:1; background:#555; padding:8px; border-radius:5px; font-size:11px;" onclick="clearLog()">ОЧИСТИТИ ЛОГ</button>
                 <button style="flex:1; background:#007bff; padding:8px; border-radius:5px; font-size:11px;" onclick="copyLog()">КОПІЮВАТИ</button>
             </div>
             
@@ -72,30 +75,29 @@
         let act = false, calls = [], logs = [];
         
         let zones = Array.from({length: 10}, (_, i) => ({ 
-            id: i + 1, x: 10, y: 50, on: false, baseline: 0, lastG: 0, 
-            detectStart: 0, 
-            lastSeenTime: 0 
+            id: i + 1, x: 10, y: 50, on: false, baseline: 0, lastVal: 0, 
+            detectStart: 0, lastSeenTime: 0 
         }));
 
         const vid = document.getElementById('video'), disp = document.getElementById('call-display'), lb = document.getElementById('log-box');
-        const ov = document.getElementById('overlay'), canv = document.createElement('canvas'), ctx = canv.getContext('2d');
+        const ov = document.getElementById('overlay'), canv = document.createElement('canvas'), ctx = canv.getContext('2d', { willReadFrequently: true });
         const pCanv = document.getElementById('pipCanvas'), pCtx = pCanv.getContext('2d'), pVid = document.getElementById('pipVideo');
 
         function addLog(m) {
             logs.push(`[${new Date().toLocaleTimeString('uk-UA',{hour12:false})}] ${m}`);
-            if (logs.length > 50) logs.shift();
+            if (logs.length > 40) logs.shift();
             lb.innerText = logs.join('\n'); lb.scrollTop = lb.scrollHeight;
         }
 
         function clearLog() { logs = []; lb.innerText = ""; }
-        function copyLog() { navigator.clipboard.writeText(logs.join('\n')).then(() => alert("Скопійовано!")); }
+        function copyLog() { navigator.clipboard.writeText(logs.join('\n')).then(() => alert("Лог скопійовано!")); }
 
         function saveUpd() {
-            localStorage.setItem('vP', JSON.stringify({
+            localStorage.setItem('vP20', JSON.stringify({
                 s: document.getElementById('sizeRange').value, 
                 g: document.getElementById('gapRange').value, 
-                e: document.getElementById('expRange').value,
-                f: document.getElementById('fpsRange').value
+                f: document.getElementById('fpsRange').value,
+                sn: document.getElementById('sensRange').value
             }));
             upd();
         }
@@ -106,6 +108,7 @@
 
             if (isCam) {
                 if (!act) return;
+                // Фільтр 20 секунд від ОСТАННЬОГО спрацювання
                 if (now - z.lastSeenTime < 20000) {
                     z.lastSeenTime = now; 
                     return; 
@@ -113,19 +116,15 @@
             }
 
             z.lastSeenTime = now;
-            addLog(`${isCam ? '📷' : '🔘'} Виклик: Палата ${id}`);
+            addLog(`${isCam ? '📷' : '🔘'} Виклик Палата ${id}`);
             
             let idx = calls.findIndex(x => x.id === id);
             if (idx !== -1) { calls.splice(idx, 1); }
-            calls.push({ id, time: now });
+            calls.push({ id, time: now }); // Додаємо в кінець (справа)
             if (calls.length > 5) calls.shift();
 
-            // Формуємо текст для Telegram: список усіх палати з хвилинами, без зайвих слів
-            let tgText = calls.map(x => {
-                let mins = Math.floor((now - x.time) / 60000);
-                return `${x.id}(${mins})`;
-            }).join(", ");
-
+            // Чистий список для Telegram
+            let tgText = calls.map(x => `${x.id}(${Math.floor((Date.now() - x.time) / 60000)})`).join(", ");
             fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent(tgText)}`);
             
             render();
@@ -134,21 +133,19 @@
         function render() {
             const now = Date.now();
             let txt = calls.length === 0 ? (act ? "ГОТОВИЙ" : "ПАУЗА") : 
-                calls.map(x => {
-                    let mins = Math.floor((now - x.time) / 60000);
-                    return `${x.id}(${mins})`;
-                }).join(", ");
+                calls.map(x => `${x.id}(${Math.floor((now - x.time) / 60000)})`).join(", ");
             
             disp.innerText = txt;
             disp.style.color = calls.length === 0 ? "#0f0" : "#f44";
             
+            // Малюємо список у PiP вікно
             pCtx.fillStyle = "black"; pCtx.fillRect(0, 0, pCanv.width, pCanv.height);
             pCtx.fillStyle = calls.length === 0 ? "#00ff00" : "#ff4444";
-            pCtx.font = "bold 50px sans-serif"; pCtx.textAlign = "center";
+            pCtx.font = "bold 55px sans-serif"; pCtx.textAlign = "center";
             pCtx.fillText(txt, pCanv.width/2, pCanv.height/2 + 20);
         }
 
-        setInterval(() => { if(calls.length > 0) render(); }, 10000);
+        setInterval(() => { if(calls.length > 0) render(); }, 10000); // Оновлення хвилин кожні 10с
 
         async function togglePiP() {
             try {
@@ -163,31 +160,39 @@
         }
 
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { res(); addLog("Скинуто Esc"); }
+            if (e.key === 'Escape') { res(); addLog("Скинуто через Esc"); } //
         });
 
         function upd() {
-            const gap = parseFloat(document.getElementById('gapRange').value), size = document.getElementById('sizeRange').value;
-            const fps = document.getElementById('fpsRange').value;
+            const gap = parseFloat(document.getElementById('gapRange').value);
+            const size = document.getElementById('sizeRange').value;
+            const sens = document.getElementById('sensRange').value;
             document.getElementById('v-size').innerText = size;
             document.getElementById('v-gap').innerText = gap;
-            document.getElementById('v-exp').innerText = document.getElementById('expRange').value;
-            document.getElementById('v-fps').innerText = fps;
+            document.getElementById('v-fps').innerText = document.getElementById('fpsRange').value;
+            document.getElementById('v-sens').innerText = sens;
             ov.innerHTML = '';
             zones.forEach((z, i) => {
                 z.x = 10 + (i * gap);
                 const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 c.setAttribute("cx", z.x + "%"); c.setAttribute("cy", z.y + "%");
-                c.setAttribute("r", size); c.setAttribute("fill", "rgba(0,255,0,0.3)");
+                c.setAttribute("r", size); c.setAttribute("fill", "rgba(0,255,0,0.2)");
                 c.setAttribute("stroke", "white"); ov.appendChild(c);
             });
         }
 
         function tglS() { const s = document.getElementById('settings-scroll'); s.style.display = (s.style.display === 'none') ? 'flex' : 'none'; }
+        
         function tglA() { 
             act = !act; 
             document.getElementById('start-btn').innerText = act ? "🛑 СТОП" : "▶ СТАРТ";
-            if (act) { setTimeout(() => { zones.forEach(z => z.baseline = z.lastG); addLog("Калібрування..."); }, 1000); } 
+            if (act) { 
+                addLog("Калібрування фону...");
+                setTimeout(() => { 
+                    zones.forEach(z => z.baseline = z.lastVal); 
+                    addLog("Калібрування завершено."); 
+                }, 1200); 
+            } 
             render(); 
         }
 
@@ -195,31 +200,35 @@
             try {
                 const s = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, facingMode: "environment" } });
                 vid.srcObject = s;
-                const p = JSON.parse(localStorage.getItem('vP') || '{}');
+                const p = JSON.parse(localStorage.getItem('vP20') || '{}');
                 if(p.s) document.getElementById('sizeRange').value = p.s;
                 if(p.g) document.getElementById('gapRange').value = p.g;
-                if(p.e) document.getElementById('expRange').value = p.e;
                 if(p.f) document.getElementById('fpsRange').value = p.f;
+                if(p.sn) document.getElementById('sensRange').value = p.sn;
                 upd(); loop();
-            } catch (e) { addLog("Симуляція..."); upd(); loop(); }
+            } catch (e) { addLog("Режим симуляції (камера не знайдена)"); upd(); loop(); }
         }
 
         function loop() {
             if (vid.readyState === 4) {
                 canv.width = vid.videoWidth; canv.height = vid.videoHeight;
-                ctx.filter = `brightness(${document.getElementById('expRange').value})`;
-                ctx.drawImage(vid, 0, 0); ctx.filter = 'none';
+                ctx.drawImage(vid, 0, 0);
                 
                 const now = Date.now();
-                zones.forEach((z) => {
-                    const x = Math.floor(canv.width * z.x / 100), y = Math.floor(canv.height * z.y / 100);
-                    const p = ctx.getImageData(x, y, 1, 1).data;
-                    const g = Math.floor(p[1] - (p[0] + p[2]) / 2);
-                    z.lastG = g;
+                const sens = parseInt(document.getElementById('sensRange').value);
 
-                    if (act && g > 80 && g > (z.baseline + 35)) {
+                zones.forEach((z) => {
+                    const x = Math.floor(canv.width * z.x / 100);
+                    const y = Math.floor(canv.height * z.y / 100);
+                    const p = ctx.getImageData(x, y, 1, 1).data;
+                    
+                    // Аналіз яскравості (Luma) для денного світла
+                    const bright = (p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114);
+                    z.lastVal = Math.floor(bright);
+
+                    if (act && bright > (z.baseline + sens)) {
                         if (z.detectStart === 0) z.detectStart = now; 
-                        if (now - z.detectStart > 300) { 
+                        if (now - z.detectStart > 300) { // Стабільність 300мс
                             reg(z.id, true);
                             z.on = true; 
                         }
@@ -233,7 +242,12 @@
             setTimeout(loop, 1000 / fps);
         }
 
-        function res() { calls = []; render(); zones.forEach(z => { z.lastSeenTime = 0; z.on = false; }); }
+        function res() { 
+            calls = []; 
+            render(); 
+            zones.forEach(z => { z.lastSeenTime = 0; z.on = false; }); 
+            addLog("Список скинуто.");
+        }
         init();
     </script>
 </body>

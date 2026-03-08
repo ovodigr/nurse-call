@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Smart v19.8 Instant Test</title>
+    <title>Vellez Smart v19.9 Telegram List</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
         #status-area { height: 12vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; }
@@ -100,31 +100,34 @@
             upd();
         }
 
-        // id: номер палати
-        // isCam: true - якщо від камери (з фільтрами), false - якщо кнопка (миттєво)
         function reg(id, isCam = true) {
             const now = Date.now();
             const z = zones.find(zn => zn.id === id);
 
             if (isCam) {
                 if (!act) return;
-                // Фільтр "ковзне вікно" 20 секунд для камери
                 if (now - z.lastSeenTime < 20000) {
                     z.lastSeenTime = now; 
                     return; 
                 }
             }
 
-            // Для кнопок або якщо фільтр камери пройдено:
             z.lastSeenTime = now;
             addLog(`${isCam ? '📷' : '🔘'} Виклик: Палата ${id}`);
-
-            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ПАЛАТА №' + id + (isCam ? '' : ' (ТЕСТ)'))}`);
             
             let idx = calls.findIndex(x => x.id === id);
             if (idx !== -1) { calls.splice(idx, 1); }
             calls.push({ id, time: now });
             if (calls.length > 5) calls.shift();
+
+            // Формуємо текст для Telegram: список усіх палати з хвилинами, без зайвих слів
+            let tgText = calls.map(x => {
+                let mins = Math.floor((now - x.time) / 60000);
+                return `${x.id}(${mins})`;
+            }).join(", ");
+
+            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent(tgText)}`);
+            
             render();
         }
 

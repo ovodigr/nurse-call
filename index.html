@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Smart v23.8 Full Persist</title>
+    <title>Vellez Smart v23.9 Final</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; touch-action: none; }
         #status-area { height: 12vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; }
@@ -30,7 +30,7 @@
         #log-box { background: #000; color: #0f0; font-family: monospace; font-size: 11px; padding: 8px; height: 80px; overflow-y: scroll; border: 1px solid #333; }
         .test-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 5px; }
         .test-btn { background: #333; padding: 14px 0; border-radius: 10px; }
-        #drag-hint { position: absolute; top: 10px; width: 100%; text-align: center; color: #007bff; font-weight: bold; display: none; z-index: 50; }
+        #drag-hint { position: absolute; top: 10px; width: 100%; text-align: center; color: #007bff; font-weight: bold; display: none; z-index: 50; text-shadow: 0 0 5px #000; }
     </style>
 </head>
 <body>
@@ -95,16 +95,14 @@
         const TG_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
         const TG_ID = '-5292414189';
         let act = false, calls = [], isSettings = false, videoTrack = null;
-        
         let groupPos = { x: 10, y: 50, gap: 5.0, size: 7 };
         let alarmPos = { x: 5, y: 50, baseline: 0, lastVal: 0, lastActiveTime: 0 };
         let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, baseline: 0, lastVal: 0, detectStart: 0, lastSeenTime: 0 }));
         let touchTarget = null, touchOffset = { x: 0, y: 0 };
 
-        const vid = document.getElementById('video'), disp = document.getElementById('call-display'), ov = document.getElementById('overlay'), camBox = document.getElementById('cam-box');
+        const vid = document.getElementById('video'), disp = document.getElementById('call-display'), ov = document.getElementById('overlay'), camBox = document.getElementById('cam-box'), hint = document.getElementById('drag-hint');
         const canv = document.createElement('canvas'), ctx = canv.getContext('2d', { willReadFrequently: true });
 
-        // Touch Handlers
         camBox.addEventListener('touchstart', (e) => {
             if (!isSettings || (e.target !== camBox && e.target !== ov)) return;
             const touch = e.touches[0], rect = camBox.getBoundingClientRect();
@@ -121,11 +119,7 @@
             if (touchTarget === 'alarm') { alarmPos.x = nx; alarmPos.y = ny; } else { groupPos.x = nx; groupPos.y = ny; }
             saveUpd(false); e.preventDefault();
         });
-
-        camBox.addEventListener('touchend', () => { 
-            if (isSettings) saveUpd(true); // ТУТ ВАЖЛИВО: Зберігаємо в LocalStorage при відпусканні пальця
-            touchTarget = null; 
-        });
+        camBox.addEventListener('touchend', () => { if (isSettings) saveUpd(true); touchTarget = null; });
 
         function loop() {
             if (vid.readyState === 4) {
@@ -172,24 +166,19 @@
             disp.innerText = txt; disp.style.color = calls.length === 0 ? "#0f0" : "#f44";
         }
 
-        function tglA() { 
-            act = !act; 
-            document.getElementById('start-btn').innerText = act ? "🛑 СТОП" : "▶ СТАРТ"; 
-            document.getElementById('start-btn').style.background = act ? "#dc3545" : "#28a745"; 
-            if (act) {
-                setTimeout(() => { 
-                    alarmPos.baseline = alarmPos.lastVal; 
-                    zones.forEach(z => z.baseline = z.lastVal); 
-                }, 1200);
-            } 
-            render(); 
-        }
-
+        function tglA() { act = !act; document.getElementById('start-btn').innerText = act ? "🛑 СТОП" : "▶ СТАРТ"; document.getElementById('start-btn').style.background = act ? "#dc3545" : "#28a745"; if (act) setTimeout(() => { alarmPos.baseline = alarmPos.lastVal; zones.forEach(z => z.baseline = z.lastVal); }, 1200); render(); }
+        
         function tglS() { 
             isSettings = !isSettings; 
-            document.getElementById('settings-overlay').style.display = isSettings ? 'flex' : 'none'; 
-            if(isSettings) openTab({currentTarget: document.querySelector('.tab-btn')}, 'tab-points'); 
-            else saveUpd(true); // Зберігаємо при виході
+            const overlay = document.getElementById('settings-overlay');
+            overlay.style.display = isSettings ? 'flex' : 'none'; 
+            if(!isSettings) {
+                hint.style.display = 'none'; // Ховаємо підказку при закритті
+                document.getElementById('status-area').style.display = 'flex';
+                saveUpd(true);
+            } else {
+                openTab({currentTarget: document.querySelector('.tab-btn')}, 'tab-points');
+            }
         }
 
         function openTab(evt, tabName) { 
@@ -198,7 +187,7 @@
             document.getElementById(tabName).style.display = "flex"; 
             evt.currentTarget.classList.add("active"); 
             document.getElementById('status-area').style.display = (tabName === 'tab-points') ? 'none' : 'flex'; 
-            document.getElementById('drag-hint').style.display = (tabName === 'tab-points') ? 'block' : 'none'; 
+            hint.style.display = (tabName === 'tab-points') ? 'block' : 'none'; // Підказка тільки в КРУЖЕЧКАХ
         }
         
         function saveUpd(ws = true) { 
@@ -212,38 +201,22 @@
             document.getElementById('v-sens').innerText = document.getElementById('sensRange').value;
             document.getElementById('v-foc').innerText = foc;
             document.getElementById('manual-focus-ui').style.display = auto ? 'none' : 'block';
-
             if (videoTrack && videoTrack.getCapabilities().focusMode) {
                 const constraints = { advanced: [{ focusMode: auto ? "continuous" : "manual" }] };
                 if (!auto) constraints.advanced[0].focusDistance = foc;
                 videoTrack.applyConstraints(constraints).catch(e => {});
             }
-
-            if(ws) {
-                localStorage.setItem('vP238', JSON.stringify({
-                    ax: alarmPos.x, ay: alarmPos.y, gx: groupPos.x, gy: groupPos.y, 
-                    s: document.getElementById('sizeRange').value, 
-                    g: document.getElementById('gapRange').value, 
-                    sn: document.getElementById('sensRange').value, 
-                    exp, con, 
-                    fps: document.getElementById('fpsRange').value, 
-                    ua: document.getElementById('useAlarm').checked, 
-                    af: auto, fdist: foc
-                }));
-            } 
+            if(ws) localStorage.setItem('vP239', JSON.stringify({ax: alarmPos.x, ay: alarmPos.y, gx: groupPos.x, gy: groupPos.y, s: document.getElementById('sizeRange').value, g: document.getElementById('gapRange').value, sn: document.getElementById('sensRange').value, exp, con, fps: document.getElementById('fpsRange').value, ua: document.getElementById('useAlarm').checked, af: auto, fdist: foc})); 
             upd(); 
         }
 
         function upd() { 
             ov.innerHTML = ''; 
-            const s = document.getElementById('sizeRange').value;
-            const gap = parseFloat(document.getElementById('gapRange').value);
-            
+            const s = document.getElementById('sizeRange').value, gap = parseFloat(document.getElementById('gapRange').value);
             const ac = document.createElementNS("http://www.w3.org/2000/svg", "circle"); 
             ac.setAttribute("cx", alarmPos.x + "%"); ac.setAttribute("cy", alarmPos.y + "%"); 
             ac.setAttribute("r", s); ac.setAttribute("fill", "rgba(255,0,0,0.4)"); 
             ac.setAttribute("stroke", "red"); ov.appendChild(ac); 
-            
             zones.forEach((z, i) => { 
                 z.curX = groupPos.x + (i * gap); z.curY = groupPos.y; 
                 const c = document.createElementNS("http://www.w3.org/2000/svg", "circle"); 
@@ -255,18 +228,14 @@
         
         async function init() { 
             try { 
-                const s = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, facingMode: "environment" } }); 
-                vid.srcObject = s;
+                const s = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, facingMode: "environment" } }); vid.srcObject = s;
                 videoTrack = s.getVideoTracks()[0];
-                const p = JSON.parse(localStorage.getItem('vP238') || '{}'); 
+                const p = JSON.parse(localStorage.getItem('vP239') || '{}'); 
                 if(p.ax !== undefined) alarmPos.x = p.ax; if(p.ay !== undefined) alarmPos.y = p.ay; 
                 if(p.gx !== undefined) groupPos.x = p.gx; if(p.gy !== undefined) groupPos.y = p.gy; 
-                if(p.exp) document.getElementById('expRange').value = p.exp; 
-                if(p.con) document.getElementById('conRange').value = p.con; 
-                if(p.sn) document.getElementById('sensRange').value = p.sn; 
-                if(p.s) document.getElementById('sizeRange').value = p.s; 
-                if(p.g) document.getElementById('gapRange').value = p.g; 
-                if(p.fps) document.getElementById('fpsRange').value = p.fps;
+                if(p.exp) document.getElementById('expRange').value = p.exp; if(p.con) document.getElementById('conRange').value = p.con; 
+                if(p.sn) document.getElementById('sensRange').value = p.sn; if(p.s) document.getElementById('sizeRange').value = p.s; 
+                if(p.g) document.getElementById('gapRange').value = p.g; if(p.fps) document.getElementById('fpsRange').value = p.fps;
                 if(p.ua !== undefined) document.getElementById('useAlarm').checked = p.ua;
                 if(p.af !== undefined) document.getElementById('autoFocus').checked = p.af;
                 if(p.fdist) document.getElementById('focRange').value = p.fdist;

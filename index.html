@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Smart v19.2 Eco</title>
+    <title>Vellez Smart v19.8 Instant Test</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
         #status-area { height: 12vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; }
@@ -19,7 +19,6 @@
         .btn-row { display: flex; gap: 8px; margin-top: 5px; }
         button { border: none; border-radius: 12px; font-weight: bold; color: white; cursor: pointer; }
         .btn-start { background: #28a745; flex: 2.5; padding: 15px; font-size: 18px; }
-        .btn-stop { background: #dc3545 !important; }
         .btn-clear { background: #444; flex: 1.5; }
         .btn-gear { background: #007bff; flex: 0.8; font-size: 20px; }
         .btn-pip { background: #6f42c1; flex: 1.2; font-size: 14px; }
@@ -34,31 +33,28 @@
         <svg id="overlay"></svg>
     </div>
 
-    <canvas id="pipCanvas" width="600" height="200" style="display:none;"></canvas>
+    <canvas id="pipCanvas" width="750" height="200" style="display:none;"></canvas>
     <video id="pipVideo" autoplay muted style="display:none;"></video>
 
     <div class="ui-panel">
         <div id="settings-scroll">
-            <div class="s-label"><span>ЧАСТОТА СКАНУВАННЯ (FPS): <span id="v-fps">1</span></span></div>
+            <div class="s-label"><span>FPS: <span id="v-fps">1</span></span></div>
             <input type="range" id="fpsRange" min="1" max="30" value="1" oninput="saveUpd()">
-            
             <div class="s-label"><span>РОЗМІР ТОЧОК: <span id="v-size">20</span></span></div>
             <input type="range" id="sizeRange" min="5" max="100" value="20" oninput="saveUpd()">
-            
             <div class="s-label"><span>ВІДСТАНЬ: <span id="v-gap">9.0</span></span></div>
             <input type="range" id="gapRange" min="2" max="15" value="9.0" step="0.1" oninput="saveUpd()">
-            
             <div class="s-label"><span>ЯСКРАВІСТЬ: <span id="v-exp">1.0</span></span></div>
             <input type="range" id="expRange" min="0.1" max="2.0" value="1.0" step="0.05" oninput="saveUpd()">
 
-            <div id="log-box" class="log-area">Лог...</div>
+            <div id="log-box" class="log-area">Лог активності...</div>
             <div style="display:flex; gap:5px; margin-top:5px;">
                 <button style="flex:1; background:#555; padding:8px; border-radius:5px; font-size:11px;" onclick="clearLog()">ОЧИСТИТИ</button>
                 <button style="flex:1; background:#007bff; padding:8px; border-radius:5px; font-size:11px;" onclick="copyLog()">КОПІЮВАТИ</button>
             </div>
             
             <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:5px; margin-top:10px;">
-                <script>for(let i=1; i<=10; i++) document.write(`<button style="background:#333; border:1px solid #555; border-radius:6px; padding:10px 0; color:white; font-weight:bold;" onclick="reg(${i})">${i}</button>`);</script>
+                <script>for(let i=1; i<=10; i++) document.write(`<button style="background:#333; border:1px solid #555; border-radius:6px; padding:10px 0; color:white; font-weight:bold;" onclick="reg(${i}, false)">${i}</button>`);</script>
             </div>
         </div>
 
@@ -73,8 +69,13 @@
     <script>
         const TG_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
         const TG_ID = '-5292414189';
-        let act = false, calls = [], logs = [], lastVals = [], loopTimeout;
-        let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, on: false, baseline: 0, lastG: 0 }));
+        let act = false, calls = [], logs = [];
+        
+        let zones = Array.from({length: 10}, (_, i) => ({ 
+            id: i + 1, x: 10, y: 50, on: false, baseline: 0, lastG: 0, 
+            detectStart: 0, 
+            lastSeenTime: 0 
+        }));
 
         const vid = document.getElementById('video'), disp = document.getElementById('call-display'), lb = document.getElementById('log-box');
         const ov = document.getElementById('overlay'), canv = document.createElement('canvas'), ctx = canv.getContext('2d');
@@ -99,19 +100,31 @@
             upd();
         }
 
-        function reg(id, cam = false) {
-            if (cam && !act) return;
-            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ПАЛАТА №' + id)}`);
-            let i = calls.findIndex(x => x.id === id);
+        // id: номер палати
+        // isCam: true - якщо від камери (з фільтрами), false - якщо кнопка (миттєво)
+        function reg(id, isCam = true) {
             const now = Date.now();
-            if (i !== -1) { 
-                calls[i].time = now;
-                let item = calls.splice(i, 1)[0];
-                calls.unshift(item); 
-            } else { 
-                calls.unshift({ id, time: now }); 
+            const z = zones.find(zn => zn.id === id);
+
+            if (isCam) {
+                if (!act) return;
+                // Фільтр "ковзне вікно" 20 секунд для камери
+                if (now - z.lastSeenTime < 20000) {
+                    z.lastSeenTime = now; 
+                    return; 
+                }
             }
-            if (calls.length > 5) calls.pop();
+
+            // Для кнопок або якщо фільтр камери пройдено:
+            z.lastSeenTime = now;
+            addLog(`${isCam ? '📷' : '🔘'} Виклик: Палата ${id}`);
+
+            fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ПАЛАТА №' + id + (isCam ? '' : ' (ТЕСТ)'))}`);
+            
+            let idx = calls.findIndex(x => x.id === id);
+            if (idx !== -1) { calls.splice(idx, 1); }
+            calls.push({ id, time: now });
+            if (calls.length > 5) calls.shift();
             render();
         }
 
@@ -193,27 +206,31 @@
                 canv.width = vid.videoWidth; canv.height = vid.videoHeight;
                 ctx.filter = `brightness(${document.getElementById('expRange').value})`;
                 ctx.drawImage(vid, 0, 0); ctx.filter = 'none';
-                let det = [];
-                zones.forEach((z, idx) => {
+                
+                const now = Date.now();
+                zones.forEach((z) => {
                     const x = Math.floor(canv.width * z.x / 100), y = Math.floor(canv.height * z.y / 100);
                     const p = ctx.getImageData(x, y, 1, 1).data;
                     const g = Math.floor(p[1] - (p[0] + p[2]) / 2);
                     z.lastG = g;
-                    if (act && g > 80 && g > (z.baseline + 35)) det.push(z.id);
+
+                    if (act && g > 80 && g > (z.baseline + 35)) {
+                        if (z.detectStart === 0) z.detectStart = now; 
+                        if (now - z.detectStart > 300) { 
+                            reg(z.id, true);
+                            z.on = true; 
+                        }
+                    } else {
+                        z.detectStart = 0;
+                        z.on = false;
+                    }
                 });
-                if (det.length > 0 && det.length < 4) {
-                    det.forEach(id => { let z = zones.find(zn => zn.id === id); if (!z.on) { reg(id, true); z.on = true; } });
-                }
-                zones.forEach(z => { if (!det.includes(z.id)) z.on = false; });
             }
-            
-            // Розрахунок затримки для FPS
             const fps = parseInt(document.getElementById('fpsRange').value);
-            const delay = 1000 / fps;
-            setTimeout(loop, delay);
+            setTimeout(loop, 1000 / fps);
         }
 
-        function res() { calls = []; render(); }
+        function res() { calls = []; render(); zones.forEach(z => { z.lastSeenTime = 0; z.on = false; }); }
         init();
     </script>
 </body>

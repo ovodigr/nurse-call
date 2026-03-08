@@ -3,40 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Smart v18.5 Landscape</title>
+    <title>Vellez Smart Monitor v18.9</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
-        
-        /* Адаптивне табло */
-        #status-area { min-height: 10vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; padding: 5px; }
-        #call-display { font-size: 8vw; color: #f44; font-weight: bold; text-align: center; width: 100%; transition: all 0.3s; }
-
-        /* Відео */
+        #status-area { height: 12vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; }
+        #call-display { font-size: 8vw; color: #f44; font-weight: bold; text-align: center; width: 100%; }
         #cam-box { position: relative; flex-grow: 1; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-
-        /* Панель керування */
         .ui-panel { background: #1a1a1a; padding: 10px; border-top: 1px solid #333; flex-shrink: 0; }
-        #settings-scroll { display: none; flex-direction: column; gap: 10px; max-height: 40vh; overflow-y: auto; padding-bottom: 10px; }
-        
-        /* Стилі для горизонтального режиму */
-        @media screen and (orientation: landscape) {
-            #status-area { min-height: 15vh; }
-            #call-display { font-size: 10vh; } /* Робимо цифри викликів величезними */
-            #settings-scroll { max-height: 30vh; }
-        }
-
+        #settings-scroll { display: none; flex-direction: column; gap: 10px; max-height: 40vh; overflow-y: auto; padding-bottom: 15px; }
         .section-title { font-size: 11px; color: #007bff; font-weight: bold; margin-top: 8px; text-transform: uppercase; border-bottom: 1px solid #333; }
         .s-label { display: flex; justify-content: space-between; font-size: 13px; color: #0f0; margin-top: 5px; }
         input[type=range] { width: 100%; height: 35px; cursor: pointer; } 
         .log-area { background: #050505; color: #8a8; font-family: monospace; font-size: 10px; padding: 5px; border: 1px solid #222; height: 80px; overflow-y: scroll; margin-top: 5px; white-space: pre-wrap; }
         .btn-row { display: flex; gap: 8px; margin-top: 5px; }
         button { border: none; border-radius: 12px; font-weight: bold; color: white; cursor: pointer; }
-        .btn-start { background: #28a745; flex: 3; padding: 15px; font-size: 18px; }
+        .btn-start { background: #28a745; flex: 2.5; padding: 15px; font-size: 18px; }
         .btn-stop { background: #dc3545 !important; }
-        .btn-clear { background: #444; flex: 2; }
-        .btn-gear { background: #007bff; flex: 1; font-size: 20px; }
+        .btn-clear { background: #444; flex: 1.5; }
+        .btn-gear { background: #007bff; flex: 0.8; font-size: 20px; }
+        .btn-pip { background: #6f42c1; flex: 1.2; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -48,29 +35,36 @@
         <svg id="overlay"></svg>
     </div>
 
+    <canvas id="pipCanvas" width="500" height="250" style="display:none;"></canvas>
+    <video id="pipVideo" autoplay muted style="display:none;"></video>
+
     <div class="ui-panel">
         <div id="settings-scroll">
-            <div class="section-title">Налаштування</div>
+            <div class="section-title">Геометрія</div>
             <div class="s-label"><span>РОЗМІР ТОЧОК</span><span id="v-size">20</span></div>
             <input type="range" id="sizeRange" min="5" max="100" value="20" oninput="saveUpd()">
             <div class="s-label"><span>ВІДСТАНЬ</span><span id="v-gap">9.0</span></div>
             <input type="range" id="gapRange" min="2" max="15" value="9.0" step="0.1" oninput="saveUpd()">
+            
+            <div class="section-title">Обробка</div>
             <div class="s-label"><span>ЦИФРОВА ЯСКРАВІСТЬ</span><span id="v-exp">1.0</span></div>
             <input type="range" id="expRange" min="0.1" max="2.0" value="1.0" step="0.05" oninput="saveUpd()">
 
-            <div class="section-title">Лог (v18.5)</div>
-            <div id="log-box" class="log-area">Натисніть СТАРТ для логування...</div>
+            <div class="section-title">Системний Лог</div>
+            <div id="log-box" class="log-area">Лог порожній...</div>
             <div style="display:flex; gap:5px; margin-top:5px;">
-                <button style="flex:1; background:#555; padding:8px; border-radius:5px; font-size:12px;" onclick="clearLog()">ОЧИСТИТИ</button>
-                <button style="flex:1; background:#007bff; padding:8px; border-radius:5px; font-size:12px;" onclick="copyLog()">КОПІЮВАТИ</button>
+                <button style="flex:1; background:#555; padding:8px; border-radius:5px; font-size:11px;" onclick="clearLog()">ОЧИСТИТИ</button>
+                <button style="flex:1; background:#007bff; padding:8px; border-radius:5px; font-size:11px;" onclick="copyLog()">КОПІЮВАТИ</button>
             </div>
+            
             <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:5px; margin-top:10px;">
                 <script>for(let i=1; i<=10; i++) document.write(`<button style="background:#333; border:1px solid #555; border-radius:6px; padding:10px 0; color:white; font-weight:bold;" onclick="reg(${i})">${i}</button>`);</script>
             </div>
         </div>
 
         <div class="btn-row">
-            <button class="btn-gear" onclick="tglS()">⚙️</button>
+            <button class="btn-gear" title="Налаштування" onclick="tglS()">⚙️</button>
+            <button class="btn-pip" title="Список поверх вікон" onclick="togglePiP()">🖼️ ПОВЕРХ</button>
             <button id="start-btn" class="btn-start" onclick="tglA()">▶ СТАРТ</button>
             <button class="btn-clear" onclick="res()">СКИДАННЯ</button>
         </div>
@@ -83,7 +77,8 @@
         let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, on: false, baseline: 0, lastG: 0 }));
 
         const vid = document.getElementById('video'), disp = document.getElementById('call-display'), lb = document.getElementById('log-box');
-        const ov = document.getElementById('overlay'), canv = document.createElement('canvas'), ctx = canv.getContext('2d');
+        const ov = document.getElementById('overlay'), canv = document.createElement('canvas'), ctx = canv.getContext('2d', { willReadFrequently: true });
+        const pCanv = document.getElementById('pipCanvas'), pCtx = pCanv.getContext('2d'), pVid = document.getElementById('pipVideo');
 
         function addLog(m) {
             if (!act) return;
@@ -93,7 +88,7 @@
         }
 
         function clearLog() { logs = []; lb.innerText = "Лог очищено."; }
-        function copyLog() { navigator.clipboard.writeText(logs.join('\n')).then(() => alert("Лог у буфері!")); }
+        function copyLog() { navigator.clipboard.writeText(logs.join('\n')).then(() => alert("Лог скопійовано!")); }
 
         function saveUpd() {
             localStorage.setItem('vP', JSON.stringify({s:document.getElementById('sizeRange').value, g:document.getElementById('gapRange').value, e:document.getElementById('expRange').value}));
@@ -111,10 +106,35 @@
         }
 
         function render() {
-            if (calls.length === 0) { disp.innerText = act ? "ГОТОВИЙ" : "ПАУЗА"; disp.style.color = "#0f0"; return; }
-            disp.innerText = calls.map(x => x.count > 1 ? `${x.id}(${x.count})` : `${x.id}`).join(", ");
-            disp.style.color = "#f44";
+            let txt = calls.length === 0 ? (act ? "ГОТОВИЙ" : "ПАУЗА") : calls.map(x => x.count > 1 ? `${x.id}(${x.count})` : `${x.id}`).join(", ");
+            disp.innerText = txt;
+            disp.style.color = calls.length === 0 ? "#0f0" : "#f44";
+            updatePipFrame(txt);
         }
+
+        function updatePipFrame(text) {
+            pCtx.fillStyle = "black"; pCtx.fillRect(0, 0, pCanv.width, pCanv.height);
+            pCtx.fillStyle = calls.length === 0 ? "#00ff00" : "#ff4444";
+            pCtx.font = "bold 60px sans-serif"; pCtx.textAlign = "center";
+            pCtx.fillText(text, pCanv.width/2, pCanv.height/2 + 20);
+        }
+
+        async function togglePiP() {
+            try {
+                if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } 
+                else {
+                    const stream = pCanv.captureStream(10);
+                    pVid.srcObject = stream;
+                    await pVid.play();
+                    await pVid.requestPictureInPicture();
+                }
+            } catch (e) { alert("PiP не підтримується цим браузером."); }
+        }
+
+        // ГАРЯЧА КЛАВІША ESC ДЛЯ СКИДАННЯ
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { res(); addLog("Скинуто через Esc"); }
+        });
 
         function upd() {
             const gap = parseFloat(document.getElementById('gapRange').value), size = document.getElementById('sizeRange').value;
@@ -130,10 +150,11 @@
         }
 
         function tglS() { const s = document.getElementById('settings-scroll'); s.style.display = (s.style.display === 'none') ? 'flex' : 'none'; }
+        
         function tglA() { 
             act = !act; document.getElementById('start-btn').innerText = act ? "🛑 СТОП" : "▶ СТАРТ";
             document.getElementById('start-btn').classList.toggle('btn-stop', act);
-            if (act) { addLog("ЗАПУСК..."); setTimeout(() => { zones.forEach(z => z.baseline = z.lastG); addLog("Готово."); }, 1000); }
+            if (act) { addLog("ЗАПУСК..."); setTimeout(() => { zones.forEach(z => z.baseline = z.lastG); addLog("Калібрування готове."); }, 1000); }
             render(); 
         }
 
@@ -146,7 +167,7 @@
                 if(p.g) document.getElementById('gapRange').value = p.g;
                 if(p.e) document.getElementById('expRange').value = p.e;
                 upd(); loop();
-            } catch (e) { disp.innerText = "ПОМИЛКА"; }
+            } catch (e) { disp.innerText = "ПОМИЛКА КАМЕРИ"; }
         }
 
         function loop() {

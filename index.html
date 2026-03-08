@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vellez Smart Monitor v18.9</title>
+    <title>Vellez Smart v19.2 Eco</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
         #status-area { height: 12vh; display: flex; align-items: center; justify-content: center; background: #111; border-bottom: 2px solid #333; flex-shrink: 0; }
@@ -12,11 +12,10 @@
         video { width: 100%; height: 100%; object-fit: contain; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .ui-panel { background: #1a1a1a; padding: 10px; border-top: 1px solid #333; flex-shrink: 0; }
-        #settings-scroll { display: none; flex-direction: column; gap: 10px; max-height: 40vh; overflow-y: auto; padding-bottom: 15px; }
-        .section-title { font-size: 11px; color: #007bff; font-weight: bold; margin-top: 8px; text-transform: uppercase; border-bottom: 1px solid #333; }
-        .s-label { display: flex; justify-content: space-between; font-size: 13px; color: #0f0; margin-top: 5px; }
-        input[type=range] { width: 100%; height: 35px; cursor: pointer; } 
-        .log-area { background: #050505; color: #8a8; font-family: monospace; font-size: 10px; padding: 5px; border: 1px solid #222; height: 80px; overflow-y: scroll; margin-top: 5px; white-space: pre-wrap; }
+        #settings-scroll { display: none; flex-direction: column; gap: 10px; max-height: 45vh; overflow-y: auto; padding-bottom: 15px; }
+        .s-label { display: flex; justify-content: space-between; font-size: 13px; color: #0f0; margin-top: 5px; font-weight: bold; }
+        input[type=range] { width: 100%; height: 40px; cursor: pointer; } 
+        .log-area { background: #050505; color: #8a8; font-family: monospace; font-size: 10px; padding: 5px; height: 80px; overflow-y: scroll; margin-top: 5px; white-space: pre-wrap; }
         .btn-row { display: flex; gap: 8px; margin-top: 5px; }
         button { border: none; border-radius: 12px; font-weight: bold; color: white; cursor: pointer; }
         .btn-start { background: #28a745; flex: 2.5; padding: 15px; font-size: 18px; }
@@ -35,23 +34,24 @@
         <svg id="overlay"></svg>
     </div>
 
-    <canvas id="pipCanvas" width="500" height="250" style="display:none;"></canvas>
+    <canvas id="pipCanvas" width="600" height="200" style="display:none;"></canvas>
     <video id="pipVideo" autoplay muted style="display:none;"></video>
 
     <div class="ui-panel">
         <div id="settings-scroll">
-            <div class="section-title">Геометрія</div>
-            <div class="s-label"><span>РОЗМІР ТОЧОК</span><span id="v-size">20</span></div>
+            <div class="s-label"><span>ЧАСТОТА СКАНУВАННЯ (FPS): <span id="v-fps">1</span></span></div>
+            <input type="range" id="fpsRange" min="1" max="30" value="1" oninput="saveUpd()">
+            
+            <div class="s-label"><span>РОЗМІР ТОЧОК: <span id="v-size">20</span></span></div>
             <input type="range" id="sizeRange" min="5" max="100" value="20" oninput="saveUpd()">
-            <div class="s-label"><span>ВІДСТАНЬ</span><span id="v-gap">9.0</span></div>
+            
+            <div class="s-label"><span>ВІДСТАНЬ: <span id="v-gap">9.0</span></span></div>
             <input type="range" id="gapRange" min="2" max="15" value="9.0" step="0.1" oninput="saveUpd()">
             
-            <div class="section-title">Обробка</div>
-            <div class="s-label"><span>ЦИФРОВА ЯСКРАВІСТЬ</span><span id="v-exp">1.0</span></div>
+            <div class="s-label"><span>ЯСКРАВІСТЬ: <span id="v-exp">1.0</span></span></div>
             <input type="range" id="expRange" min="0.1" max="2.0" value="1.0" step="0.05" oninput="saveUpd()">
 
-            <div class="section-title">Системний Лог</div>
-            <div id="log-box" class="log-area">Лог порожній...</div>
+            <div id="log-box" class="log-area">Лог...</div>
             <div style="display:flex; gap:5px; margin-top:5px;">
                 <button style="flex:1; background:#555; padding:8px; border-radius:5px; font-size:11px;" onclick="clearLog()">ОЧИСТИТИ</button>
                 <button style="flex:1; background:#007bff; padding:8px; border-radius:5px; font-size:11px;" onclick="copyLog()">КОПІЮВАТИ</button>
@@ -63,8 +63,8 @@
         </div>
 
         <div class="btn-row">
-            <button class="btn-gear" title="Налаштування" onclick="tglS()">⚙️</button>
-            <button class="btn-pip" title="Список поверх вікон" onclick="togglePiP()">🖼️ ПОВЕРХ</button>
+            <button class="btn-gear" onclick="tglS()">⚙️</button>
+            <button class="btn-pip" onclick="togglePiP()">🖼️ ПОВЕРХ</button>
             <button id="start-btn" class="btn-start" onclick="tglA()">▶ СТАРТ</button>
             <button class="btn-clear" onclick="res()">СКИДАННЯ</button>
         </div>
@@ -73,51 +73,66 @@
     <script>
         const TG_TOKEN = '8727015231:AAG4c-i_fWkX84ChY3NvS0NLnrzBnWXiO7g';
         const TG_ID = '-5292414189';
-        let act = false, calls = [], logs = [], lastVals = [];
+        let act = false, calls = [], logs = [], lastVals = [], loopTimeout;
         let zones = Array.from({length: 10}, (_, i) => ({ id: i + 1, x: 10, y: 50, on: false, baseline: 0, lastG: 0 }));
 
         const vid = document.getElementById('video'), disp = document.getElementById('call-display'), lb = document.getElementById('log-box');
-        const ov = document.getElementById('overlay'), canv = document.createElement('canvas'), ctx = canv.getContext('2d', { willReadFrequently: true });
+        const ov = document.getElementById('overlay'), canv = document.createElement('canvas'), ctx = canv.getContext('2d');
         const pCanv = document.getElementById('pipCanvas'), pCtx = pCanv.getContext('2d'), pVid = document.getElementById('pipVideo');
 
         function addLog(m) {
-            if (!act) return;
             logs.push(`[${new Date().toLocaleTimeString('uk-UA',{hour12:false})}] ${m}`);
             if (logs.length > 50) logs.shift();
             lb.innerText = logs.join('\n'); lb.scrollTop = lb.scrollHeight;
         }
 
-        function clearLog() { logs = []; lb.innerText = "Лог очищено."; }
-        function copyLog() { navigator.clipboard.writeText(logs.join('\n')).then(() => alert("Лог скопійовано!")); }
+        function clearLog() { logs = []; lb.innerText = ""; }
+        function copyLog() { navigator.clipboard.writeText(logs.join('\n')).then(() => alert("Скопійовано!")); }
 
         function saveUpd() {
-            localStorage.setItem('vP', JSON.stringify({s:document.getElementById('sizeRange').value, g:document.getElementById('gapRange').value, e:document.getElementById('expRange').value}));
+            localStorage.setItem('vP', JSON.stringify({
+                s: document.getElementById('sizeRange').value, 
+                g: document.getElementById('gapRange').value, 
+                e: document.getElementById('expRange').value,
+                f: document.getElementById('fpsRange').value
+            }));
             upd();
         }
 
         function reg(id, cam = false) {
             if (cam && !act) return;
             fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_ID}&text=${encodeURIComponent('🚨 ПАЛАТА №' + id)}`);
-            addLog(`ПАЛАТА №${id}${cam ? ' (АВТО)' : ' (ТЕСТ)'}`);
             let i = calls.findIndex(x => x.id === id);
-            if (i !== -1) { calls[i].count++; calls.push(calls.splice(i, 1)[0]); } else { calls.push({ id, count: 1 }); }
-            if (calls.length > 5) calls.shift();
+            const now = Date.now();
+            if (i !== -1) { 
+                calls[i].time = now;
+                let item = calls.splice(i, 1)[0];
+                calls.unshift(item); 
+            } else { 
+                calls.unshift({ id, time: now }); 
+            }
+            if (calls.length > 5) calls.pop();
             render();
         }
 
         function render() {
-            let txt = calls.length === 0 ? (act ? "ГОТОВИЙ" : "ПАУЗА") : calls.map(x => x.count > 1 ? `${x.id}(${x.count})` : `${x.id}`).join(", ");
+            const now = Date.now();
+            let txt = calls.length === 0 ? (act ? "ГОТОВИЙ" : "ПАУЗА") : 
+                calls.map(x => {
+                    let mins = Math.floor((now - x.time) / 60000);
+                    return `${x.id}(${mins})`;
+                }).join(", ");
+            
             disp.innerText = txt;
             disp.style.color = calls.length === 0 ? "#0f0" : "#f44";
-            updatePipFrame(txt);
-        }
-
-        function updatePipFrame(text) {
+            
             pCtx.fillStyle = "black"; pCtx.fillRect(0, 0, pCanv.width, pCanv.height);
             pCtx.fillStyle = calls.length === 0 ? "#00ff00" : "#ff4444";
-            pCtx.font = "bold 60px sans-serif"; pCtx.textAlign = "center";
-            pCtx.fillText(text, pCanv.width/2, pCanv.height/2 + 20);
+            pCtx.font = "bold 50px sans-serif"; pCtx.textAlign = "center";
+            pCtx.fillText(txt, pCanv.width/2, pCanv.height/2 + 20);
         }
+
+        setInterval(() => { if(calls.length > 0) render(); }, 10000);
 
         async function togglePiP() {
             try {
@@ -128,17 +143,20 @@
                     await pVid.play();
                     await pVid.requestPictureInPicture();
                 }
-            } catch (e) { alert("PiP не підтримується цим браузером."); }
+            } catch (e) { alert("PiP помилка"); }
         }
 
-        // ГАРЯЧА КЛАВІША ESC ДЛЯ СКИДАННЯ
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { res(); addLog("Скинуто через Esc"); }
+            if (e.key === 'Escape') { res(); addLog("Скинуто Esc"); }
         });
 
         function upd() {
             const gap = parseFloat(document.getElementById('gapRange').value), size = document.getElementById('sizeRange').value;
-            document.getElementById('v-size').innerText = size; document.getElementById('v-gap').innerText = gap; document.getElementById('v-exp').innerText = document.getElementById('expRange').value;
+            const fps = document.getElementById('fpsRange').value;
+            document.getElementById('v-size').innerText = size;
+            document.getElementById('v-gap').innerText = gap;
+            document.getElementById('v-exp').innerText = document.getElementById('expRange').value;
+            document.getElementById('v-fps').innerText = fps;
             ov.innerHTML = '';
             zones.forEach((z, i) => {
                 z.x = 10 + (i * gap);
@@ -150,11 +168,10 @@
         }
 
         function tglS() { const s = document.getElementById('settings-scroll'); s.style.display = (s.style.display === 'none') ? 'flex' : 'none'; }
-        
         function tglA() { 
-            act = !act; document.getElementById('start-btn').innerText = act ? "🛑 СТОП" : "▶ СТАРТ";
-            document.getElementById('start-btn').classList.toggle('btn-stop', act);
-            if (act) { addLog("ЗАПУСК..."); setTimeout(() => { zones.forEach(z => z.baseline = z.lastG); addLog("Калібрування готове."); }, 1000); }
+            act = !act; 
+            document.getElementById('start-btn').innerText = act ? "🛑 СТОП" : "▶ СТАРТ";
+            if (act) { setTimeout(() => { zones.forEach(z => z.baseline = z.lastG); addLog("Калібрування..."); }, 1000); } 
             render(); 
         }
 
@@ -166,8 +183,9 @@
                 if(p.s) document.getElementById('sizeRange').value = p.s;
                 if(p.g) document.getElementById('gapRange').value = p.g;
                 if(p.e) document.getElementById('expRange').value = p.e;
+                if(p.f) document.getElementById('fpsRange').value = p.f;
                 upd(); loop();
-            } catch (e) { disp.innerText = "ПОМИЛКА КАМЕРИ"; }
+            } catch (e) { addLog("Симуляція..."); upd(); loop(); }
         }
 
         function loop() {
@@ -181,10 +199,6 @@
                     const p = ctx.getImageData(x, y, 1, 1).data;
                     const g = Math.floor(p[1] - (p[0] + p[2]) / 2);
                     z.lastG = g;
-                    if (act && Math.abs(g - (lastVals[idx] || 0)) > 12) {
-                        addLog(`З ${z.id}: ${g} (б:${Math.floor(z.baseline)})`);
-                        lastVals[idx] = g;
-                    }
                     if (act && g > 80 && g > (z.baseline + 35)) det.push(z.id);
                 });
                 if (det.length > 0 && det.length < 4) {
@@ -192,7 +206,11 @@
                 }
                 zones.forEach(z => { if (!det.includes(z.id)) z.on = false; });
             }
-            requestAnimationFrame(loop);
+            
+            // Розрахунок затримки для FPS
+            const fps = parseInt(document.getElementById('fpsRange').value);
+            const delay = 1000 / fps;
+            setTimeout(loop, delay);
         }
 
         function res() { calls = []; render(); }
